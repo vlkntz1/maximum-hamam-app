@@ -389,7 +389,7 @@ def view_admin_page():
     st.subheader("Yönetici Paneli (Admin Dashboard)")
     password = st.text_input("Enter Admin Password", type="password")
     
-    if password == "hamam2024":
+    if password == "volkanAdmin":
         st.success("Sisteme başarıyla giriş yapıldı.")
         
         st.write("### 📊 Rezervasyon Özeti")
