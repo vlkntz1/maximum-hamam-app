@@ -180,4 +180,407 @@ LANGUAGES = {
         "name": "Fullständigt Namn *",
         "package": "Välj Paket",
         "people": "Antal Personer",
-        "date
+        "date": "Önskat Datum",
+        "time": "Önskad Tid",
+        "pickup": "Jag behöver gratis upphämtning i Kuşadası",
+        "hotel": "Hotellnamn / Adress (Lämna tomt om upphämtning ej behövs)",
+        "notes": "Särskilda Önskemål (Allergies, tryckpreferens, etc.)",
+        "btn_save": "Spara Bokningsdetaljer",
+        "err_name": "Vänligen ange ditt fullständiga namn.",
+        "err_hotel": "Vänligen ange ditt hotellnamn så vi kan ordna en chaufför.",
+        "success": "Detaljer sparade framgångsrikt",
+        "wa_link": "👉 Klicka här för att skicka dessa detaljer till vår WhatsApp och bekräfta!",
+        "wa_greet": "Hej Maximum Hamam! Jag vill bekräfta min bokning:",
+        "wa_id": "Boknings-ID",
+        "wa_name": "Namn",
+        "wa_pack": "Paket",
+        "wa_ppl": "Personer",
+        "wa_date": "Datum",
+        "wa_time": "Tid",
+        "wa_pick": "Upphämtningshotell",
+        "wa_notes": "Anteckningar"
+    }
+}
+
+# ==========================================
+# 0.1. TIME GENERATOR (SAAT ÜRETİCİ)
+# ==========================================
+def generate_time_options():
+    times = []
+    for h in range(8, 22): # 08:00'dan 21:00'a kadar
+        times.append(f"{h:02d}:00")
+        if h != 21: # 21:30'u eklememek için kontrol
+            times.append(f"{h:02d}:30")
+    return times
+
+TIME_OPTIONS = generate_time_options()
+
+# ==========================================
+# 1. GOOGLE SHEETS DATABASE FUNCTIONS
+# ==========================================
+@st.cache_resource
+def get_sheet():
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    try:
+        creds_dict = json.loads(st.secrets["gcp_service_account"])
+    except Exception:
+        with open("credentials.json", "r", encoding="utf-8") as f:
+            creds_dict = json.load(f)
+            
+    credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    gc = gspread.authorize(credentials)
+    sheet = gc.open("Maximum_Hamam_DB").sheet1
+    return sheet
+
+def init_db():
+    sheet = get_sheet()
+    if len(sheet.get_all_values()) == 0:
+        # Sütunlara 'time' eklendi
+        headers = ['id', 'name', 'package', 'people', 'date', 'time', 'hotel', 'notes', 'timestamp', 'status']
+        sheet.append_row(headers)
+
+def add_booking(name, package, people, date, time, hotel, notes):
+    sheet = get_sheet()
+    records = sheet.get_all_records()
+    
+    if not records:
+        new_id = 1
+    else:
+        ids = [int(r['id']) for r in records if str(r.get('id', '')).isdigit()]
+        new_id = max(ids) + 1 if ids else 1
+        
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    status = 'Bekliyor'
+    
+    # Yeni satıra 'time' verisi eklendi
+    new_row = [new_id, name, package, people, str(date), str(time), hotel, notes, timestamp, status]
+    sheet.append_row(new_row)
+    return new_id
+
+def view_all_bookings(status_filter="Tümü"):
+    sheet = get_sheet()
+    records = sheet.get_all_records()
+    
+    if status_filter != "Tümü":
+        records = [r for r in records if r.get('status') == status_filter]
+        
+    records.reverse()
+    
+    # Görünüm sütunlarına 'time' eklendi
+    columns = ['id', 'name', 'package', 'people', 'date', 'time', 'hotel', 'notes', 'timestamp', 'status']
+    rows = [[r.get(c, "") for c in columns] for r in records]
+    
+    return records, columns, rows
+
+def update_booking(booking_id, name, package, people, date, time, hotel, notes, status):
+    sheet = get_sheet()
+    records = sheet.get_all_records()
+    for i, row in enumerate(records):
+        if str(row['id']) == str(booking_id):
+            row_idx = i + 2 
+            # Güncellenecek satıra 'time' eklendi
+            updated_row = [booking_id, name, package, people, str(date), str(time), hotel, notes, row['timestamp'], status]
+            # Sütun aralığı I'dan J'ye çıkarıldı (10 sütun için A:J)
+            sheet.update(values=[updated_row], range_name=f"A{row_idx}:J{row_idx}")
+            break
+
+def delete_booking(booking_id):
+    sheet = get_sheet()
+    records = sheet.get_all_records()
+    for i, row in enumerate(records):
+        if str(row['id']) == str(booking_id):
+            sheet.delete_rows(i + 2)
+            break
+
+def get_status_counts():
+    sheet = get_sheet()
+    records = sheet.get_all_records()
+    counts = {}
+    for r in records:
+        status = r.get('status', 'Bekliyor')
+        counts[status] = counts.get(status, 0) + 1
+    return counts
+
+init_db()
+
+# ==========================================
+# 2. APP CONFIGURATION & STYLING
+# ==========================================
+st.set_page_config(page_title="Maximum Hamam Booking", page_icon="🧖‍♂️", layout="wide")
+
+st.markdown("""
+    <style>
+    .main { background-color: #fdfaf0; }
+    h1, h2, h3 { color: #b8860b; }
+    .stButton>button { background-color: #25D366; color: white; width: 100%; border-radius: 8px;} 
+    div[data-baseweb="select"], div[data-baseweb="select"] * { cursor: pointer !important; }
+    
+    /* İkonları kalıcı olarak gizleyen kısım */
+    a.header-anchor { display: none !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# ==========================================
+# 3. LANGUAGE SELECTOR (TOP RIGHT)
+# ==========================================
+col_empty, col_lang = st.columns([8, 2])
+with col_lang:
+    selected_lang = st.selectbox(
+        "Language", 
+        options=list(LANGUAGES.keys()), 
+        index=0, 
+        label_visibility="collapsed"
+    )
+
+t = LANGUAGES[selected_lang]
+t_en = LANGUAGES["🇬🇧 English"]
+
+# ==========================================
+# 4. SAYFA GÖRÜNÜMLERİ (FUNCTIONS)
+# ==========================================
+
+# A. Müşteri Rezervasyon Sayfası İçeriği
+def view_booking_page():
+    st.title(t["title"], anchor=False)
+    st.subheader(t["sub"], anchor=False)
+    st.write(t["desc"])
+    
+    with st.form("booking_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            name = st.text_input(t["name"])
+            package = st.selectbox(t["package"], [
+                "Just Facility Use - 40€", "Traditional Turkish Bath - 50€", 
+                "Express Journey - 85€", "Recovery Journey - 150€", 
+                "Lux Turkish Bath - 70€", "Relax Journey - 110€", 
+                "Luxury Mix - 125€", "Sultan Journey - 200€"
+            ])
+            # Kişi sayısını sola taşıdım ki sağ taraf tarih ve saat ile dengelensin
+            people = st.number_input(t["people"], min_value=1, max_value=10)
+        with col2:
+            date = st.date_input(t["date"])
+            # SAAT SEÇENEĞİ BURAYA EKLENDİ
+            time_val = st.selectbox(t["time"], TIME_OPTIONS)
+        
+        pickup_needed = st.checkbox(t["pickup"])
+        hotel = st.text_input(t["hotel"])
+        notes = st.text_area(t["notes"])
+        
+        submit = st.form_submit_button(t["btn_save"])
+        
+        if submit:
+            if not name:
+                st.error(t["err_name"])
+            elif pickup_needed and not hotel:
+                st.error(t["err_hotel"])
+            else:
+                # add_booking fonksiyonuna time_val değişkenini de gönderiyoruz
+                booking_id = add_booking(name, package, people, date, time_val, hotel, notes)
+                st.success(f"{t['success']}, {name}! (ID: #{booking_id})")
+                
+                business_phone = "905396690127"
+                
+                msg_local = f"{t['wa_greet']}\n"
+                msg_local += f"{t['wa_id']}: #{booking_id}\n"
+                msg_local += f"{t['wa_name']}: {name}\n"
+                msg_local += f"{t['wa_pack']}: {package}\n"
+                msg_local += f"{t['wa_ppl']}: {people}\n"
+                msg_local += f"{t['wa_date']}: {date}\n"
+                msg_local += f"{t['wa_time']}: {time_val}\n"  # Mesaja Saat eklendi
+                if hotel:
+                    msg_local += f"{t['wa_pick']}: {hotel}\n"
+                if notes:
+                    msg_local += f"{t['wa_notes']}: {notes}\n"
+                
+                final_msg = msg_local 
+                
+                if selected_lang != "🇬🇧 English":
+                    msg_eng = f"\n--- ENGLISH ---\n{t_en['wa_greet']}\n"
+                    msg_eng += f"Reservation ID: #{booking_id}\n"
+                    msg_eng += f"Name: {name}\n"
+                    msg_eng += f"Package: {package}\n"
+                    msg_eng += f"People: {people}\n"
+                    msg_eng += f"Date: {date}\n"
+                    msg_eng += f"Time: {time_val}\n"  # İngilizce mesaja Saat eklendi
+                    if hotel:
+                        msg_eng += f"Pick-up Hotel: {hotel}\n"
+                    if notes:
+                        msg_eng += f"Notes: {notes}\n"
+                    final_msg += msg_eng 
+                
+                encoded_msg = urllib.parse.quote(final_msg)
+                whatsapp_url = f"https://wa.me/{business_phone}?text={encoded_msg}"
+                
+                st.markdown(f"### 👉 [{t['wa_link']}]({whatsapp_url})")
+
+
+# B. Yönetici (Admin) Sayfası İçeriği
+def view_admin_page():
+    st.title("Maximum Hamam & Spa", anchor=False)
+    st.subheader("Yönetici Paneli (Admin Dashboard)", anchor=False)
+    password = st.text_input("Enter Admin Password", type="password")
+    
+    if password == st.secrets["admin_password"]:
+        st.success("Sisteme başarıyla giriş yapıldı.")
+        
+        st.subheader("📊 Rezervasyon Özeti", anchor=False)
+        counts = get_status_counts()
+        
+        m1, m2, m3, m4, m5 = st.columns(5)
+        m1.metric("⏳ Bekleyen", counts.get("Bekliyor", 0))
+        m2.metric("✅ Onaylanan", counts.get("Onaylandı", 0))
+        m3.metric("🚶‍♂️ Gelen", counts.get("Geldi", 0))
+        m4.metric("❌ Gelmeyen", counts.get("Gelmedi", 0))
+        m5.metric("🚫 İptal Edilen", counts.get("İptal", 0))
+        
+        st.divider() 
+        
+        st.subheader("📋 Rezervasyon Listesi", anchor=False)
+        col_filter, col_down = st.columns([3, 1])
+        
+        with col_filter:
+            status_filter = st.selectbox("Duruma Göre Filtrele:", ["Tümü", "Bekliyor", "Onaylandı", "Geldi", "Gelmedi", "İptal"])
+            
+        data, columns, rows = view_all_bookings(status_filter)
+        
+        with col_down:
+            st.write("") 
+            if data:
+                output = io.StringIO()
+                output.write("sep=;\n") 
+                writer = csv.writer(output, delimiter=';')
+                writer.writerow(columns) 
+                writer.writerows(rows)   
+                csv_data = output.getvalue().encode('utf-8-sig') 
+                
+                st.download_button(
+                    label="📥 Listeyi CSV Olarak İndir",
+                    data=csv_data,
+                    file_name=f"hamam_{status_filter.lower()}_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv",
+                )
+                
+        if not data:
+            st.info("Bu kritere uygun rezervasyon bulunamadı.")
+        else:
+            if "prev_table_selection" not in st.session_state:
+                st.session_state.prev_table_selection = []
+            if "admin_selectbox" not in st.session_state:
+                st.session_state.admin_selectbox = "Seçiniz..."
+
+            event = st.dataframe(
+                data, 
+                use_container_width=True,
+                on_select="rerun",
+                selection_mode="single-row"
+            )
+            
+            current_table_selection = event.selection.rows
+            if current_table_selection != st.session_state.prev_table_selection:
+                if current_table_selection:
+                    selected_id_from_table = data[current_table_selection[0]]["id"]
+                    st.session_state.admin_selectbox = selected_id_from_table
+                else:
+                    st.session_state.admin_selectbox = "Seçiniz..."
+                st.session_state.prev_table_selection = current_table_selection
+            
+            st.divider()
+            
+            st.subheader("⚙️ Rezervasyon Yönetim Konsolu", anchor=False)
+            st.write("Değişiklik yapmak istediğiniz rezervasyonu **yukarıdaki tablodan tıklayarak** veya **aşağıdaki listeden** seçebilirsiniz.")
+            
+            available_ids = [row["id"] for row in data]
+            dropdown_options = ["Seçiniz..."] + available_ids
+            
+            if st.session_state.admin_selectbox not in dropdown_options:
+                st.session_state.admin_selectbox = "Seçiniz..."
+                
+            selected_id = st.selectbox(
+                "İşlem Yapılacak ID Seçin:", 
+                dropdown_options, 
+                key="admin_selectbox"
+            )
+            
+            if selected_id != "Seçiniz...":
+                selected_data = next((item for item in data if item["id"] == selected_id), None)
+                
+                with st.form("edit_form"):
+                    st.write(f"**ID: #{selected_id} Düzenleniyor**")
+                    status_options = ["Bekliyor", "Onaylandı", "Geldi", "Gelmedi", "İptal"]
+                    new_status = st.selectbox("Durum *", status_options, index=status_options.index(selected_data["status"]))
+                    
+                    col_e1, col_e2 = st.columns(2)
+                    with col_e1:
+                        new_name = st.text_input("Müşteri Adı", value=selected_data["name"])
+                        new_package = st.selectbox("Paket", [
+                            "Just Facility Use - 40€", "Traditional Turkish Bath - 50€", 
+                            "Express Journey - 85€", "Recovery Journey - 150€", 
+                            "Lux Turkish Bath - 70€", "Relax Journey - 110€", 
+                            "Luxury Mix - 125€", "Sultan Journey - 200€"
+                        ], index=0 if selected_data["package"] not in [
+                            "Just Facility Use - 40€", "Traditional Turkish Bath - 50€", 
+                            "Express Journey - 85€", "Recovery Journey - 150€", 
+                            "Lux Turkish Bath - 70€", "Relax Journey - 110€", 
+                            "Luxury Mix - 125€", "Sultan Journey - 200€"
+                        ] else [
+                            "Just Facility Use - 40€", "Traditional Turkish Bath - 50€", 
+                            "Express Journey - 85€", "Recovery Journey - 150€", 
+                            "Lux Turkish Bath - 70€", "Relax Journey - 110€", 
+                            "Luxury Mix - 125€", "Sultan Journey - 200€"
+                        ].index(selected_data["package"]))
+                        new_people = st.number_input("Kişi Sayısı", min_value=1, value=int(selected_data["people"]))
+                    
+                    with col_e2:
+                        try:
+                            parsed_date = datetime.strptime(selected_data["date"], "%Y-%m-%d").date()
+                        except:
+                            parsed_date = datetime.now().date()
+                            
+                        new_date = st.date_input("Tarih", value=parsed_date)
+                        
+                        # Admin düzenleme formuna Saat eklendi
+                        saat_index = TIME_OPTIONS.index(selected_data["time"]) if selected_data.get("time") in TIME_OPTIONS else 0
+                        new_time = st.selectbox("Saat", TIME_OPTIONS, index=saat_index)
+                        
+                        new_hotel = st.text_input("Otel/Transfer", value=selected_data["hotel"])
+                    
+                    # Notlar alanını alt tarafa geniş olarak ekledik
+                    new_notes = st.text_area("Notlar", value=selected_data["notes"])
+                    
+                    col_upd, col_del = st.columns(2)
+                    with col_upd:
+                        btn_update = st.form_submit_button("💾 Değişiklikleri Kaydet")
+                    with col_del:
+                        btn_delete = st.form_submit_button("🗑️ Bu Rezervasyonu Sil")
+                        
+                if btn_update:
+                    # update_booking fonksiyonuna new_time değişkeni gönderildi
+                    update_booking(selected_id, new_name, new_package, new_people, new_date, new_time, new_hotel, new_notes, new_status)
+                    st.success(f"ID #{selected_id} başarıyla güncellendi!")
+                    st.rerun() 
+                    
+                if btn_delete:
+                    delete_booking(selected_id)
+                    st.warning(f"ID #{selected_id} sistemden tamamen silindi!")
+                    st.session_state.admin_selectbox = "Seçiniz..."
+                    st.rerun() 
+
+    elif password != "":
+        st.error("Hatalı Şifre.")
+
+# ==========================================
+# 5. SAYFA YÖNLENDİRİCİSİ (NAVIGATION SİSTEMİ)
+# ==========================================
+
+# Müşteri sayfasının "Ana Sayfa (Default)" olduğunu belirtiyoruz
+page_customer = st.Page(view_booking_page, title="Book a Session", default=True)
+
+# Admin sayfasının /admin adresinde olduğunu belirtiyoruz
+page_admin = st.Page(view_admin_page, title="Admin Dashboard", url_path="admin")
+
+# Sayfaları çalıştırıyoruz
+pg = st.navigation([page_customer, page_admin], position="hidden")
+pg.run()
