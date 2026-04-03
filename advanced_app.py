@@ -191,8 +191,6 @@ LANGUAGES = {
 # ==========================================
 # 1. GOOGLE SHEETS DATABASE FUNCTIONS
 # ==========================================
-
-# Performansı artırmak için Google Sheets bağlantısını hafızada tutuyoruz
 @st.cache_resource
 def get_sheet():
     scopes = [
@@ -200,10 +198,8 @@ def get_sheet():
         "https://www.googleapis.com/auth/drive"
     ]
     try:
-        # İnternetteyken (Streamlit Cloud)
         creds_dict = json.loads(st.secrets["gcp_service_account"])
     except Exception:
-        # Bilgisayarınızdayken (Local)
         with open("credentials.json", "r", encoding="utf-8") as f:
             creds_dict = json.load(f)
             
@@ -214,7 +210,6 @@ def get_sheet():
 
 def init_db():
     sheet = get_sheet()
-    # Eğer tablo bomboşsa başlıkları otomatik olarak en üste yaz
     if len(sheet.get_all_values()) == 0:
         headers = ['id', 'name', 'package', 'people', 'date', 'hotel', 'notes', 'timestamp', 'status']
         sheet.append_row(headers)
@@ -223,7 +218,6 @@ def add_booking(name, package, people, date, hotel, notes):
     sheet = get_sheet()
     records = sheet.get_all_records()
     
-    # Yeni Sıra Numarası (ID) Hesaplama
     if not records:
         new_id = 1
     else:
@@ -244,7 +238,6 @@ def view_all_bookings(status_filter="Tümü"):
     if status_filter != "Tümü":
         records = [r for r in records if r.get('status') == status_filter]
         
-    # En yeni rezervasyonlar tablonun en üstünde görünsün
     records.reverse()
     
     columns = ['id', 'name', 'package', 'people', 'date', 'hotel', 'notes', 'timestamp', 'status']
@@ -257,7 +250,7 @@ def update_booking(booking_id, name, package, people, date, hotel, notes, status
     records = sheet.get_all_records()
     for i, row in enumerate(records):
         if str(row['id']) == str(booking_id):
-            row_idx = i + 2 # +1 başlıklar için, +1 de index 0'dan başladığı için
+            row_idx = i + 2 
             updated_row = [booking_id, name, package, people, str(date), hotel, notes, row['timestamp'], status]
             sheet.update(values=[updated_row], range_name=f"A{row_idx}:I{row_idx}")
             break
@@ -286,12 +279,16 @@ init_db()
 # ==========================================
 st.set_page_config(page_title="Maximum Hamam Booking", page_icon="🧖‍♂️", layout="wide")
 
+# CSS ile link ikonlarını (header-anchor) tamamen gizliyoruz
 st.markdown("""
     <style>
     .main { background-color: #fdfaf0; }
     h1, h2, h3 { color: #b8860b; }
     .stButton>button { background-color: #25D366; color: white; width: 100%; border-radius: 8px;} 
     div[data-baseweb="select"], div[data-baseweb="select"] * { cursor: pointer !important; }
+    
+    /* İkonları kalıcı olarak gizleyen kısım */
+    a.header-anchor { display: none !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -316,8 +313,9 @@ t_en = LANGUAGES["🇬🇧 English"]
 
 # A. Müşteri Rezervasyon Sayfası İçeriği
 def view_booking_page():
-    st.title(t["title"])
-    st.subheader(t["sub"])
+    # Burada anchor=False parametresi ile linkleri kapattık
+    st.title(t["title"], anchor=False)
+    st.subheader(t["sub"], anchor=False)
     st.write(t["desc"])
     
     with st.form("booking_form"):
@@ -385,14 +383,16 @@ def view_booking_page():
 
 # B. Yönetici (Admin) Sayfası İçeriği
 def view_admin_page():
-    st.title("Maximum Hamam & Spa")
-    st.subheader("Yönetici Paneli (Admin Dashboard)")
+    # Admin sayfasındaki başlıklarda da anchor=False kullandık
+    st.title("Maximum Hamam & Spa", anchor=False)
+    st.subheader("Yönetici Paneli (Admin Dashboard)", anchor=False)
     password = st.text_input("Enter Admin Password", type="password")
     
+    # ŞİFRENİZİ ARTIK STREAMLIT SECRETS KASASINDAN ÇEKİYORUZ!
     if password == st.secrets["admin_password"]:
         st.success("Sisteme başarıyla giriş yapıldı.")
         
-        st.write("### 📊 Rezervasyon Özeti")
+        st.subheader("📊 Rezervasyon Özeti", anchor=False)
         counts = get_status_counts()
         
         m1, m2, m3, m4, m5 = st.columns(5)
@@ -404,7 +404,7 @@ def view_admin_page():
         
         st.divider() 
         
-        st.write("### 📋 Rezervasyon Listesi")
+        st.subheader("📋 Rezervasyon Listesi", anchor=False)
         col_filter, col_down = st.columns([3, 1])
         
         with col_filter:
@@ -455,7 +455,7 @@ def view_admin_page():
             
             st.divider()
             
-            st.write("### ⚙️ Rezervasyon Yönetim Konsolu")
+            st.subheader("⚙️ Rezervasyon Yönetim Konsolu", anchor=False)
             st.write("Değişiklik yapmak istediğiniz rezervasyonu **yukarıdaki tablodan tıklayarak** veya **aşağıdaki listeden** seçebilirsiniz.")
             
             available_ids = [row["id"] for row in data]
@@ -539,6 +539,6 @@ page_customer = st.Page(view_booking_page, title="Book a Session", default=True)
 # Admin sayfasının /admin adresinde olduğunu belirtiyoruz
 page_admin = st.Page(view_admin_page, title="Admin Dashboard", url_path="admin")
 
-# Sayfaları çalıştırıyoruz (position="hidden" sayesinde sol menü TAMAMEN GİZLENİR)
+# Sayfaları çalıştırıyoruz
 pg = st.navigation([page_customer, page_admin], position="hidden")
 pg.run()
