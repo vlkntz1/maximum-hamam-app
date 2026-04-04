@@ -393,14 +393,27 @@ def view_booking_page():
     st.subheader(t["sub"], anchor=False)
     st.write(t["desc"])
     
+    # Formu yenilemek için dinamik anahtar
+    if "form_key" not in st.session_state:
+        st.session_state.form_key = 0
+        
+    # Eğer başarılı bir kayıt yapıldıysa mesajı en üstte göster ve state'den sil
+    if "success_data" in st.session_state:
+        st.success(st.session_state.success_data["msg"])
+        st.markdown(st.session_state.success_data["link"])
+        del st.session_state.success_data
+        
+    fk = st.session_state.form_key
+    
     col1, col2 = st.columns(2)
     with col1:
-        name = st.text_input(t["name"])
-        phone = st.text_input(t["phone"])
-        package = st.selectbox(t["package"], list(PACKAGE_PRICES.keys()))
+        # Alanlara dinamik anahtarlar atandı (fk)
+        name = st.text_input(t["name"], key=f"name_{fk}")
+        phone = st.text_input(t["phone"], key=f"phone_{fk}")
+        package = st.selectbox(t["package"], list(PACKAGE_PRICES.keys()), key=f"pkg_{fk}")
     with col2:
-        people = st.number_input(t["people"], min_value=1, max_value=10)
-        date = st.date_input(t["date"], min_value=get_turkey_time().date())
+        people = st.number_input(t["people"], min_value=1, max_value=10, key=f"ppl_{fk}")
+        date = st.date_input(t["date"], min_value=get_turkey_time().date(), key=f"date_{fk}")
         
         available_times = generate_dynamic_time_options(date)
         
@@ -408,14 +421,14 @@ def view_booking_page():
             st.error(t["err_notime"])
             time_val = None
         else:
-            time_val = st.selectbox(t["time"], available_times)
+            time_val = st.selectbox(t["time"], available_times, key=f"time_{fk}")
     
     total_price = PACKAGE_PRICES[package] * people
     st.info(f"💶 **{t['total_price']} {total_price}€**")
     
-    pickup_needed = st.checkbox(t["pickup"])
-    hotel = st.text_input(t["hotel"], disabled=not pickup_needed)
-    notes = st.text_area(t["notes"])
+    pickup_needed = st.checkbox(t["pickup"], key=f"pick_{fk}")
+    hotel = st.text_input(t["hotel"], disabled=not pickup_needed, key=f"hotel_{fk}")
+    notes = st.text_area(t["notes"], key=f"notes_{fk}")
     
     submit = st.button(t["btn_save"], type="primary")
     
@@ -438,7 +451,6 @@ def view_booking_page():
             else:
                 final_phone = cleaned_phone_for_test
                 booking_id = add_booking(name, final_phone, package, people, date, time_val, hotel, notes)
-                st.success(f"{t['success']}, {name}! (ID: #{booking_id})")
                 
                 business_phone = "905396690127"
                 
@@ -476,7 +488,14 @@ def view_booking_page():
                 
                 encoded_msg = urllib.parse.quote(final_msg)
                 whatsapp_url = f"https://wa.me/{business_phone}?text={encoded_msg}"
-                st.markdown(f"### 👉 [{t['wa_link']}]({whatsapp_url})")
+                
+                # Başarılı kayıt sonrası bilgileri state'e kaydet ve formu yenilemek için anahtarı değiştir
+                st.session_state.success_data = {
+                    "msg": f"{t['success']}, {name}! (ID: #{booking_id})",
+                    "link": f"### 👉 [{t['wa_link']}]({whatsapp_url})"
+                }
+                st.session_state.form_key += 1
+                st.rerun()
 
 
 # B. Yönetici (Admin) Sayfası İçeriği
@@ -509,7 +528,6 @@ def view_admin_page():
         raw_records = sheet.get_all_records()
         valid_records = [r for r in raw_records if r.get('status') != 'İptal']
         
-        # GRAFİK HESAPLAMASI DEĞİŞTİRİLDİ: Artık rezervasyon sayısına göre değil, kişi sayısına göre topluyor.
         pkg_counts = {}
         for r in valid_records:
             p = r.get('package', '')
@@ -517,7 +535,7 @@ def view_admin_page():
                 try:
                     num_people = int(r.get('people', 1))
                 except (ValueError, TypeError):
-                    num_people = 1 # Manuel hatalı girişlere karşı güvenlik
+                    num_people = 1 
                 pkg_counts[p] = pkg_counts.get(p, 0) + num_people
                 
         col_metrics, col_chart = st.columns([2, 3])
@@ -533,7 +551,6 @@ def view_admin_page():
         with col_chart:
             st.write("**En Çok Tercih Edilen Paketler (Kişi Sayısına Göre)**")
             if pkg_counts:
-                # Sütun adı "Sayı" yerine "Kişi Sayısı" yapıldı
                 chart_data = pd.DataFrame(list(pkg_counts.items()), columns=["Paket", "Kişi Sayısı"])
                 st.bar_chart(chart_data, x="Paket", y="Kişi Sayısı", color="Paket")
             else:
