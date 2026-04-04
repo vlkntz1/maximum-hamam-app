@@ -1,6 +1,6 @@
 import streamlit as st
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timedelta
 import csv
 import io
 import json
@@ -31,6 +31,8 @@ LANGUAGES = {
         "err_phone": "Please enter your Phone Number.",
         "err_hotel": "Please provide your Hotel Name so we can arrange your driver.",
         "err_cap": "⚠️ Sorry, this date and time slot is already booked. Please select another time.",
+        "err_notime": "⚠️ No available time slots left for today. Please select another date.",
+        "err_invalid_time": "Please select a valid time.",
         "success": "Details saved successfully",
         "wa_link": "👉 Click here to send these details to our WhatsApp and confirm your booking!",
         "wa_greet": "Hello Maximum Hamam! I would like to confirm my booking:",
@@ -63,6 +65,8 @@ LANGUAGES = {
         "err_phone": "Lütfen Telefon Numaranızı giriniz.",
         "err_hotel": "Şoförümüzün sizi alabilmesi için lütfen Otel Adını giriniz.",
         "err_cap": "⚠️ Üzgünüz, seçtiğiniz tarih ve saat doludur. Lütfen farklı bir saat seçin.",
+        "err_notime": "⚠️ Bugün için uygun saat kalmamıştır. Lütfen yarın veya ileri bir tarih seçin.",
+        "err_invalid_time": "Lütfen geçerli bir saat seçin.",
         "success": "Bilgiler başarıyla kaydedildi",
         "wa_link": "👉 Rezervasyonunuzu onaylamak ve bilgileri WhatsApp'tan göndermek için buraya tıklayın!",
         "wa_greet": "Merhaba Maximum Hamam! Rezervasyonumu onaylamak istiyorum:",
@@ -95,6 +99,8 @@ LANGUAGES = {
         "err_phone": "Bitte geben Sie Ihre Telefonnummer ein.",
         "err_hotel": "Bitte geben Sie Ihren Hotelnamen an.",
         "err_cap": "⚠️ Diese Zeit ist bereits gebucht. Bitte wählen Sie eine andere.",
+        "err_notime": "⚠️ Heute sind keine Termine mehr frei. Bitte wählen Sie ein anderes Datum.",
+        "err_invalid_time": "Bitte wählen Sie eine gültige Zeit.",
         "success": "Erfolgreich gespeichert",
         "wa_link": "👉 Klicken Sie hier, um über WhatsApp zu bestätigen!",
         "wa_greet": "Hallo! Ich möchte meine Buchung bestätigen:",
@@ -120,6 +126,8 @@ LANGUAGES = {
         "err_phone": "Vul uw telefoonnummer in.",
         "err_hotel": "Geef uw hotelnaam op.",
         "err_cap": "⚠️ Deze tijd is al geboekt. Kies een andere tijd.",
+        "err_notime": "⚠️ Geen beschikbare tijden meer voor vandaag. Kies een andere datum.",
+        "err_invalid_time": "Kies een geldige tijd.",
         "success": "Succesvol opgeslagen",
         "wa_link": "👉 Klik hier om via WhatsApp te bevestigen!",
         "wa_greet": "Hallo! Ik bevestig mijn boeking:",
@@ -145,6 +153,8 @@ LANGUAGES = {
         "err_phone": "Vul uw telefoonnummer in.",
         "err_hotel": "Geef uw hotelnaam op.",
         "err_cap": "⚠️ Deze tijd is al geboekt. Kies een andere tijd.",
+        "err_notime": "⚠️ Geen beschikbare tijden meer voor vandaag. Kies een andere datum.",
+        "err_invalid_time": "Kies een geldige tijd.",
         "success": "Succesvol opgeslagen",
         "wa_link": "👉 Klik hier om via WhatsApp te bevestigen!",
         "wa_greet": "Hallo! Ik bevestig mijn boeking:",
@@ -170,6 +180,8 @@ LANGUAGES = {
         "err_phone": "Veuillez entrer votre téléphone.",
         "err_hotel": "Veuillez indiquer l'hôtel.",
         "err_cap": "⚠️ Cette heure est déjà réservée. Veuillez en choisir une autre.",
+        "err_notime": "⚠️ Plus de créneaux disponibles pour aujourd'hui. Veuillez choisir une autre date.",
+        "err_invalid_time": "Veuillez choisir une heure valide.",
         "success": "Enregistré avec succès",
         "wa_link": "👉 Cliquez ici pour confirmer sur WhatsApp!",
         "wa_greet": "Bonjour! Je confirme ma réservation:",
@@ -195,6 +207,8 @@ LANGUAGES = {
         "err_phone": "Ange ditt telefonnummer.",
         "err_hotel": "Ange hotellnamn.",
         "err_cap": "⚠️ Denna tid är redan bokad. Välj en annan.",
+        "err_notime": "⚠️ Inga lediga tider kvar idag. Välj ett annat datum.",
+        "err_invalid_time": "Välj en giltig tid.",
         "success": "Sparat framgångsrikt",
         "wa_link": "👉 Klicka här för att bekräfta på WhatsApp!",
         "wa_greet": "Hej! Jag bekräftar min bokning:",
@@ -211,17 +225,47 @@ PACKAGE_PRICES = {
 }
 
 # ==========================================
-# 0.1. TIME GENERATOR
+# 0.1. ZAMAN FONKSİYONLARI (TÜRKİYE SAATİ)
 # ==========================================
-def generate_time_options():
+def get_turkey_time():
+    # Streamlit UTC kullandığı için Türkiye saati olan UTC+3'e sabitliyoruz
+    return datetime.utcnow() + timedelta(hours=3)
+
+def get_full_time_options():
     times = []
     for h in range(8, 22):
-        times.append(f"{h:02d}:00")
-        if h != 21:
-            times.append(f"{h:02d}:30")
+        for m in ["00", "30"]:
+            if h == 21 and m == "30":
+                continue
+            times.append(f"{h:02d}:{m}")
     return times
 
-TIME_OPTIONS = generate_time_options()
+FULL_TIME_OPTIONS = get_full_time_options()
+
+def generate_dynamic_time_options(selected_date):
+    """Seçilen tarihe göre geçmiş saatleri gizleyen dinamik fonksiyon"""
+    times = []
+    now_tr = get_turkey_time()
+    
+    # Seçilen tarih bugün mü kontrolü
+    is_today = (selected_date == now_tr.date())
+    current_time_str = now_tr.strftime("%H:%M")
+    
+    for h in range(8, 22):
+        for m in ["00", "30"]:
+            if h == 21 and m == "30":
+                continue
+                
+            time_str = f"{h:02d}:{m}"
+            
+            # Eğer tarih bugünse ve saat şu anki saatten küçükse listeye ekleme
+            if is_today:
+                if time_str > current_time_str:
+                    times.append(time_str)
+            else:
+                times.append(time_str)
+                
+    return times
 
 # ==========================================
 # 1. GOOGLE SHEETS DATABASE FUNCTIONS
@@ -264,7 +308,7 @@ def add_booking(name, phone, package, people, date, time, hotel, notes):
         ids = [int(r['id']) for r in records if str(r.get('id', '')).isdigit()]
         new_id = max(ids) + 1 if ids else 1
         
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = get_turkey_time().strftime("%Y-%m-%d %H:%M:%S")
     status = 'Bekliyor'
     
     new_row = [new_id, name, phone, package, people, str(date), str(time), hotel, notes, timestamp, status]
@@ -352,8 +396,18 @@ def view_booking_page():
         package = st.selectbox(t["package"], list(PACKAGE_PRICES.keys()))
     with col2:
         people = st.number_input(t["people"], min_value=1, max_value=10)
-        date = st.date_input(t["date"], min_value=datetime.today().date())
-        time_val = st.selectbox(t["time"], TIME_OPTIONS)
+        # Tarih seçimini saatten ÖNCE alıyoruz ki saati tarihe göre güncelleyebilelim
+        date = st.date_input(t["date"], min_value=get_turkey_time().date())
+        
+        # Seçilen tarihe göre saat listesini dinamik oluşturuyoruz
+        available_times = generate_dynamic_time_options(date)
+        
+        if not available_times:
+            # Eğer gün bittiyse ve bugün için saat kalmadıysa uyarı ver
+            st.error(t["err_notime"])
+            time_val = None
+        else:
+            time_val = st.selectbox(t["time"], available_times)
     
     total_price = PACKAGE_PRICES[package] * people
     st.info(f"💶 **{t['total_price']} {total_price}€**")
@@ -371,6 +425,9 @@ def view_booking_page():
             st.error(t["err_phone"])
         elif pickup_needed and not hotel:
             st.error(t["err_hotel"])
+        elif not time_val:
+            # Saat boşsa hata ver (Günün bitmesi durumu)
+            st.error(t["err_invalid_time"])
         else:
             if check_capacity(str(date), time_val):
                 st.error(t["err_cap"])
@@ -493,7 +550,7 @@ def view_admin_page():
                 
                 st.download_button(
                     label="📥 Listeyi CSV Olarak İndir", data=csv_data,
-                    file_name=f"hamam_{status_filter.lower()}_{datetime.now().strftime('%Y%m%d')}.csv",
+                    file_name=f"hamam_{status_filter.lower()}_{get_turkey_time().strftime('%Y%m%d')}.csv",
                     mime="text/csv",
                 )
                 
@@ -551,12 +608,8 @@ def view_admin_page():
                 else:
                     st.write(f"### 📝 ID: #{selected_id} Düzenleniyor")
                     
-                    # ==========================================
-                    # YENİ EKLENEN WHATSAPP BUTONU
-                    # ==========================================
                     phone_val = str(selected_data.get("phone", "")).strip()
                     if phone_val:
-                        # Numaradaki boşluk, +, () gibi işaretleri temizleyip sadece rakamları alıyoruz
                         clean_phone = ''.join(filter(str.isdigit, phone_val))
                         if clean_phone:
                             wa_url = f"https://wa.me/{clean_phone}"
@@ -581,11 +634,13 @@ def view_admin_page():
                             try:
                                 parsed_date = datetime.strptime(selected_data["date"], "%Y-%m-%d").date()
                             except:
-                                parsed_date = datetime.now().date()
+                                parsed_date = get_turkey_time().date()
                                 
                             new_date = st.date_input("Tarih", value=parsed_date)
-                            saat_index = TIME_OPTIONS.index(selected_data["time"]) if selected_data.get("time") in TIME_OPTIONS else 0
-                            new_time = st.selectbox("Saat", TIME_OPTIONS, index=saat_index)
+                            
+                            # Admin paneli hata düzeltme ihtimaline karşı tüm saatleri gösterir
+                            saat_index = FULL_TIME_OPTIONS.index(selected_data["time"]) if selected_data.get("time") in FULL_TIME_OPTIONS else 0
+                            new_time = st.selectbox("Saat", FULL_TIME_OPTIONS, index=saat_index)
                             new_hotel = st.text_input("Otel/Transfer", value=selected_data["hotel"])
                         
                         new_notes = st.text_area("Notlar", value=selected_data["notes"])
