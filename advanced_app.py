@@ -272,7 +272,7 @@ def generate_dynamic_time_options(selected_date):
     return times
 
 # ==========================================
-# 1. GOOGLE SHEETS DATABASE FUNCTIONS
+# 1. GOOGLE SHEETS DATABASE FUNCTIONS (OPTIMİZE EDİLDİ)
 # ==========================================
 @st.cache_resource
 def get_sheet():
@@ -319,18 +319,6 @@ def add_booking(name, phone, package, people, date, time, hotel, notes):
     sheet.append_row(new_row)
     return new_id
 
-def view_all_bookings(status_filter="Tümü"):
-    sheet = get_sheet()
-    records = sheet.get_all_records()
-    
-    if status_filter != "Tümü":
-        records = [r for r in records if r.get('status') == status_filter]
-        
-    records.reverse()
-    columns = ['id', 'name', 'phone', 'package', 'people', 'date', 'time', 'hotel', 'notes', 'timestamp', 'status']
-    rows = [[r.get(c, "") for c in columns] for r in records]
-    return records, columns, rows
-
 def update_booking(booking_id, name, phone, package, people, date, time, hotel, notes, status):
     sheet = get_sheet()
     records = sheet.get_all_records()
@@ -349,15 +337,6 @@ def delete_booking(booking_id):
             sheet.delete_rows(i + 2)
             break
 
-def get_status_counts():
-    sheet = get_sheet()
-    records = sheet.get_all_records()
-    counts = {}
-    for r in records:
-        status = r.get('status', 'Bekliyor')
-        counts[status] = counts.get(status, 0) + 1
-    return counts
-
 # ==========================================
 # 2. APP CONFIGURATION & STYLING
 # ==========================================
@@ -375,13 +354,12 @@ st.markdown("""
 
 
 # ==========================================
-# 4. SAYFA GÖRÜNÜMLERİ
+# 3. SAYFA GÖRÜNÜMLERİ
 # ==========================================
 
 # A. Müşteri Rezervasyon Sayfası İçeriği
 def view_booking_page():
     
-    # DİL SEÇİCİSİ SADECE MÜŞTERİ SAYFASINDA GÖRÜNECEK ŞEKİLDE BURAYA TAŞINDI
     col_empty, col_lang = st.columns([8, 2])
     with col_lang:
         selected_lang = st.selectbox("Language", options=list(LANGUAGES.keys()), index=0, label_visibility="collapsed")
@@ -494,7 +472,7 @@ def view_booking_page():
                 st.rerun()
 
 
-# B. Yönetici (Admin) Sayfası İçeriği
+# B. Yönetici (Admin) Sayfası İçeriği (OPTIMİZE EDİLDİ)
 def view_admin_page():
     col_title, col_refresh = st.columns([8, 2])
     with col_title:
@@ -518,12 +496,24 @@ def view_admin_page():
     if st.session_state.admin_logged_in:
         st.success("Sisteme başarıyla giriş yapıldı.")
         
+        # TEK BİR API İSTEĞİ İLE TÜM VERİYİ ALIYORUZ
+        sheet = get_sheet()
+        try:
+            all_records = sheet.get_all_records()
+        except Exception as e:
+            st.error("Google Sheets bağlantısında geçici bir gecikme yaşandı. Lütfen saniyeler içinde tekrar deneyin.")
+            st.stop()
+            
         st.subheader("📊 İşletme Analizleri ve Özet", anchor=False)
         
-        sheet = get_sheet()
-        raw_records = sheet.get_all_records()
-        valid_records = [r for r in raw_records if r.get('status') != 'İptal']
-        
+        # 1. Metrik Hesaplamaları
+        counts = {}
+        for r in all_records:
+            status = r.get('status', 'Bekliyor')
+            counts[status] = counts.get(status, 0) + 1
+            
+        # 2. Grafik Hesaplamaları
+        valid_records = [r for r in all_records if r.get('status') != 'İptal']
         pkg_counts = {}
         for r in valid_records:
             p = r.get('package', '')
@@ -537,7 +527,6 @@ def view_admin_page():
         col_metrics, col_chart = st.columns([2, 3])
         
         with col_metrics:
-            counts = get_status_counts()
             st.metric("⏳ Bekleyen", counts.get("Bekliyor", 0))
             st.metric("✅ Onaylanan", counts.get("Onaylandı", 0))
             st.metric("🚶‍♂️ Gelen", counts.get("Geldi", 0))
@@ -560,11 +549,19 @@ def view_admin_page():
         with col_filter:
             status_filter = st.selectbox("Duruma Göre Filtrele:", ["Tümü", "Bekliyor", "Onaylandı", "Geldi", "Gelmedi", "İptal"])
             
-        data, columns, rows = view_all_bookings(status_filter)
+        # 3. Liste Hesaplamaları
+        if status_filter != "Tümü":
+            filtered_records = [r for r in all_records if r.get('status') == status_filter]
+        else:
+            filtered_records = list(all_records)
+            
+        filtered_records.reverse()
+        columns = ['id', 'name', 'phone', 'package', 'people', 'date', 'time', 'hotel', 'notes', 'timestamp', 'status']
+        rows = [[r.get(c, "") for c in columns] for r in filtered_records]
         
         with col_down:
             st.write("") 
-            if data:
+            if filtered_records:
                 output = io.StringIO()
                 output.write("sep=;\n") 
                 writer = csv.writer(output, delimiter=';')
@@ -578,7 +575,7 @@ def view_admin_page():
                     mime="text/csv",
                 )
                 
-        if not data:
+        if not filtered_records:
             st.info("Bu kritere uygun rezervasyon bulunamadı.")
         else:
             if "prev_table_selection" not in st.session_state:
@@ -586,12 +583,12 @@ def view_admin_page():
             if "admin_selectbox" not in st.session_state:
                 st.session_state.admin_selectbox = "Seçiniz..."
 
-            event = st.dataframe(data, use_container_width=True, on_select="rerun", selection_mode="single-row")
+            event = st.dataframe(filtered_records, use_container_width=True, on_select="rerun", selection_mode="single-row")
             
             current_table_selection = event.selection.rows
             if current_table_selection != st.session_state.prev_table_selection:
                 if current_table_selection:
-                    selected_id_from_table = data[current_table_selection[0]]["id"]
+                    selected_id_from_table = filtered_records[current_table_selection[0]]["id"]
                     st.session_state.admin_selectbox = selected_id_from_table
                 else:
                     st.session_state.admin_selectbox = "Seçiniz..."
@@ -602,7 +599,7 @@ def view_admin_page():
             st.subheader("⚙️ Rezervasyon Yönetim Konsolu", anchor=False)
             st.write("Değişiklik yapmak istediğiniz rezervasyonu **yukarıdaki tablodan tıklayarak** veya **aşağıdaki listeden** seçebilirsiniz.")
             
-            available_ids = [row["id"] for row in data]
+            available_ids = [row["id"] for row in filtered_records]
             dropdown_options = ["Seçiniz..."] + available_ids
             
             if st.session_state.admin_selectbox not in dropdown_options:
@@ -614,7 +611,7 @@ def view_admin_page():
                 st.session_state.confirm_delete = False
             
             if selected_id != "Seçiniz...":
-                selected_data = next((item for item in data if item["id"] == selected_id), None)
+                selected_data = next((item for item in filtered_records if item["id"] == selected_id), None)
                 
                 if st.session_state.confirm_delete:
                     st.warning(f"⚠️ ID #{selected_id} numaralı rezervasyonu tamamen silmek istediğinize emin misiniz? Bu işlem geri alınamaz!")
