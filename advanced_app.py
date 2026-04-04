@@ -6,7 +6,7 @@ import io
 import json
 import gspread
 import pandas as pd
-import re  # Telefon numarası kontrolü için eklendi
+import re  
 from google.oauth2.service_account import Credentials
 
 # ==========================================
@@ -420,8 +420,6 @@ def view_booking_page():
     submit = st.button(t["btn_save"], type="primary")
     
     if submit:
-        # TELEFON NUMARASI KONTROLÜ (Regex)
-        # Boşlukları ve tireleri geçici olarak silip formatı test ediyoruz
         cleaned_phone_for_test = phone.replace(" ", "").replace("-", "").strip()
         
         if not name:
@@ -429,7 +427,6 @@ def view_booking_page():
         elif not phone:
             st.error(t["err_phone"])
         elif not re.match(r"^\+?[0-9]{7,15}$", cleaned_phone_for_test):
-            # Eğer harf varsa veya 7 haneden kısaysa hata ver
             st.error(t["err_phone_format"])
         elif pickup_needed and not hotel:
             st.error(t["err_hotel"])
@@ -439,7 +436,6 @@ def view_booking_page():
             if check_capacity(str(date), time_val):
                 st.error(t["err_cap"])
             else:
-                # Numarayı boşluklardan ve harflerden tamamen arındırıp veritabanına tertemiz kaydediyoruz
                 final_phone = cleaned_phone_for_test
                 booking_id = add_booking(name, final_phone, package, people, date, time_val, hotel, notes)
                 st.success(f"{t['success']}, {name}! (ID: #{booking_id})")
@@ -513,11 +509,16 @@ def view_admin_page():
         raw_records = sheet.get_all_records()
         valid_records = [r for r in raw_records if r.get('status') != 'İptal']
         
+        # GRAFİK HESAPLAMASI DEĞİŞTİRİLDİ: Artık rezervasyon sayısına göre değil, kişi sayısına göre topluyor.
         pkg_counts = {}
         for r in valid_records:
             p = r.get('package', '')
             if p:
-                pkg_counts[p] = pkg_counts.get(p, 0) + 1
+                try:
+                    num_people = int(r.get('people', 1))
+                except (ValueError, TypeError):
+                    num_people = 1 # Manuel hatalı girişlere karşı güvenlik
+                pkg_counts[p] = pkg_counts.get(p, 0) + num_people
                 
         col_metrics, col_chart = st.columns([2, 3])
         
@@ -530,10 +531,11 @@ def view_admin_page():
             st.metric("🚫 İptal", counts.get("İptal", 0))
             
         with col_chart:
-            st.write("**En Çok Tercih Edilen Paketler**")
+            st.write("**En Çok Tercih Edilen Paketler (Kişi Sayısına Göre)**")
             if pkg_counts:
-                chart_data = pd.DataFrame(list(pkg_counts.items()), columns=["Paket", "Sayı"])
-                st.bar_chart(chart_data, x="Paket", y="Sayı", color="Paket")
+                # Sütun adı "Sayı" yerine "Kişi Sayısı" yapıldı
+                chart_data = pd.DataFrame(list(pkg_counts.items()), columns=["Paket", "Kişi Sayısı"])
+                st.bar_chart(chart_data, x="Paket", y="Kişi Sayısı", color="Paket")
             else:
                 st.info("Henüz yeterli veri yok.")
         
