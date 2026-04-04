@@ -335,79 +335,81 @@ t_en = LANGUAGES["🇬🇧 English"]
 # 4. SAYFA GÖRÜNÜMLERİ (FUNCTIONS)
 # ==========================================
 
-# A. Müşteri Rezervasyon Sayfası İçeriği
+    # A. Müşteri Rezervasyon Sayfası İçeriği
 def view_booking_page():
     st.title(t["title"], anchor=False)
     st.subheader(t["sub"], anchor=False)
     st.write(t["desc"])
     
-    with st.form("booking_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            name = st.text_input(t["name"])
-            package = st.selectbox(t["package"], [
-                "Just Facility Use - 40€", "Traditional Turkish Bath - 50€", 
-                "Express Journey - 85€", "Recovery Journey - 150€", 
-                "Lux Turkish Bath - 70€", "Relax Journey - 110€", 
-                "Luxury Mix - 125€", "Sultan Journey - 200€"
-            ])
-            people = st.number_input(t["people"], min_value=1, max_value=10)
-        with col2:
-            date = st.date_input(t["date"])
-            time_val = st.selectbox(t["time"], TIME_OPTIONS)
-        
-        pickup_needed = st.checkbox(t["pickup"])
-        
-        # Dinamik Otel/Adres Girişi (Eğer checkbox seçili değilse, kutucuk pasif olur)
-        hotel = st.text_input(t["hotel"], disabled=not pickup_needed)
-        
-        notes = st.text_area(t["notes"])
-        
-        submit = st.form_submit_button(t["btn_save"])
-        
-        if submit:
-            if not name:
-                st.error(t["err_name"])
-            elif pickup_needed and not hotel:
-                st.error(t["err_hotel"])
-            else:
-                booking_id = add_booking(name, package, people, date, time_val, hotel, notes)
-                st.success(f"{t['success']}, {name}! (ID: #{booking_id})")
-                
-                business_phone = "905396690127"
-                
-                msg_local = f"{t['wa_greet']}\n"
-                msg_local += f"{t['wa_id']}: #{booking_id}\n"
-                msg_local += f"{t['wa_name']}: {name}\n"
-                msg_local += f"{t['wa_pack']}: {package}\n"
-                msg_local += f"{t['wa_ppl']}: {people}\n"
-                msg_local += f"{t['wa_date']}: {date}\n"
-                msg_local += f"{t['wa_time']}: {time_val}\n"
+    # st.form YAPISINI KALDIRDIK. Böylece sayfa anında tepki verebilecek.
+    col1, col2 = st.columns(2)
+    with col1:
+        name = st.text_input(t["name"])
+        package = st.selectbox(t["package"], [
+            "Just Facility Use - 40€", "Traditional Turkish Bath - 50€", 
+            "Express Journey - 85€", "Recovery Journey - 150€", 
+            "Lux Turkish Bath - 70€", "Relax Journey - 110€", 
+            "Luxury Mix - 125€", "Sultan Journey - 200€"
+        ])
+        people = st.number_input(t["people"], min_value=1, max_value=10)
+    with col2:
+        date = st.date_input(t["date"])
+        time_val = st.selectbox(t["time"], TIME_OPTIONS)
+    
+    # Checkbox anında sayfayı güncelleyecek
+    pickup_needed = st.checkbox(t["pickup"])
+    
+    # Kutucuk işaretliyse disabled=False, değilse disabled=True olacak
+    hotel = st.text_input(t["hotel"], disabled=not pickup_needed)
+    
+    notes = st.text_area(t["notes"])
+    
+    # st.form_submit_button yerine normal st.button kullanıyoruz
+    submit = st.button(t["btn_save"], type="primary")
+    
+    if submit:
+        if not name:
+            st.error(t["err_name"])
+        elif pickup_needed and not hotel:
+            st.error(t["err_hotel"])
+        else:
+            booking_id = add_booking(name, package, people, date, time_val, hotel, notes)
+            st.success(f"{t['success']}, {name}! (ID: #{booking_id})")
+            
+            business_phone = "905396690127"
+            
+            msg_local = f"{t['wa_greet']}\n"
+            msg_local += f"{t['wa_id']}: #{booking_id}\n"
+            msg_local += f"{t['wa_name']}: {name}\n"
+            msg_local += f"{t['wa_pack']}: {package}\n"
+            msg_local += f"{t['wa_ppl']}: {people}\n"
+            msg_local += f"{t['wa_date']}: {date}\n"
+            msg_local += f"{t['wa_time']}: {time_val}\n"
+            if hotel:
+                msg_local += f"{t['wa_pick']}: {hotel}\n"
+            if notes:
+                msg_local += f"{t['wa_notes']}: {notes}\n"
+            
+            final_msg = msg_local 
+            
+            if selected_lang != "🇬🇧 English":
+                msg_eng = f"\n--- ENGLISH ---\n{t_en['wa_greet']}\n"
+                msg_eng += f"Reservation ID: #{booking_id}\n"
+                msg_eng += f"Name: {name}\n"
+                msg_eng += f"Package: {package}\n"
+                msg_eng += f"People: {people}\n"
+                msg_eng += f"Date: {date}\n"
+                msg_eng += f"Time: {time_val}\n"
                 if hotel:
-                    msg_local += f"{t['wa_pick']}: {hotel}\n"
+                    msg_eng += f"Pick-up Hotel: {hotel}\n"
                 if notes:
-                    msg_local += f"{t['wa_notes']}: {notes}\n"
-                
-                final_msg = msg_local 
-                
-                if selected_lang != "🇬🇧 English":
-                    msg_eng = f"\n--- ENGLISH ---\n{t_en['wa_greet']}\n"
-                    msg_eng += f"Reservation ID: #{booking_id}\n"
-                    msg_eng += f"Name: {name}\n"
-                    msg_eng += f"Package: {package}\n"
-                    msg_eng += f"People: {people}\n"
-                    msg_eng += f"Date: {date}\n"
-                    msg_eng += f"Time: {time_val}\n"
-                    if hotel:
-                        msg_eng += f"Pick-up Hotel: {hotel}\n"
-                    if notes:
-                        msg_eng += f"Notes: {notes}\n"
-                    final_msg += msg_eng 
-                
-                encoded_msg = urllib.parse.quote(final_msg)
-                whatsapp_url = f"https://wa.me/{business_phone}?text={encoded_msg}"
-                
-                st.markdown(f"### 👉 [{t['wa_link']}]({whatsapp_url})")
+                    msg_eng += f"Notes: {notes}\n"
+                final_msg += msg_eng 
+            
+            encoded_msg = urllib.parse.quote(final_msg)
+            whatsapp_url = f"https://wa.me/{business_phone}?text={encoded_msg}"
+            
+            st.markdown(f"### 👉 [{t['wa_link']}]({whatsapp_url})"
 
 
 # B. Yönetici (Admin) Sayfası İçeriği
