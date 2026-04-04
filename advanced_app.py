@@ -496,7 +496,6 @@ def view_admin_page():
     if st.session_state.admin_logged_in:
         st.success("Sisteme başarıyla giriş yapıldı.")
         
-        # TEK BİR API İSTEĞİ İLE TÜM VERİYİ ALIYORUZ
         sheet = get_sheet()
         try:
             all_records = sheet.get_all_records()
@@ -506,13 +505,11 @@ def view_admin_page():
             
         st.subheader("📊 İşletme Analizleri ve Özet", anchor=False)
         
-        # 1. Metrik Hesaplamaları
         counts = {}
         for r in all_records:
             status = r.get('status', 'Bekliyor')
             counts[status] = counts.get(status, 0) + 1
             
-        # 2. Grafik Hesaplamaları
         valid_records = [r for r in all_records if r.get('status') != 'İptal']
         pkg_counts = {}
         for r in valid_records:
@@ -549,7 +546,6 @@ def view_admin_page():
         with col_filter:
             status_filter = st.selectbox("Duruma Göre Filtrele:", ["Tümü", "Bekliyor", "Onaylandı", "Geldi", "Gelmedi", "İptal"])
             
-        # 3. Liste Hesaplamaları
         if status_filter != "Tümü":
             filtered_records = [r for r in all_records if r.get('status') == status_filter]
         else:
@@ -591,7 +587,8 @@ def view_admin_page():
                     selected_id_from_table = filtered_records[current_table_selection[0]]["id"]
                     st.session_state.admin_selectbox = selected_id_from_table
                 else:
-                    st.session_state.admin_selectbox = "Seçiniz..."
+                    if "admin_selectbox" in st.session_state:
+                        del st.session_state["admin_selectbox"]
                 st.session_state.prev_table_selection = current_table_selection
             
             st.divider()
@@ -617,10 +614,15 @@ def view_admin_page():
                     st.warning(f"⚠️ ID #{selected_id} numaralı rezervasyonu tamamen silmek istediğinize emin misiniz? Bu işlem geri alınamaz!")
                     col_yes, col_no = st.columns(2)
                     with col_yes:
+                        # ===== HATA ÇÖZÜMÜ BURADA YAPILDI =====
                         if st.button("Evet, Sil", type="primary"):
                             delete_booking(selected_id)
                             st.session_state.confirm_delete = False 
-                            st.session_state.admin_selectbox = "Seçiniz..." 
+                            # Değer atamak yerine hafızadan temizliyoruz, hata engelleniyor!
+                            if "admin_selectbox" in st.session_state:
+                                del st.session_state["admin_selectbox"]
+                            if "prev_table_selection" in st.session_state:
+                                st.session_state.prev_table_selection = []
                             st.rerun() 
                     with col_no:
                         if st.button("Hayır, İptal Et"):
