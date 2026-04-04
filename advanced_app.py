@@ -228,7 +228,6 @@ PACKAGE_PRICES = {
 # 0.1. ZAMAN FONKSİYONLARI (TÜRKİYE SAATİ)
 # ==========================================
 def get_turkey_time():
-    # Streamlit UTC kullandığı için Türkiye saati olan UTC+3'e sabitliyoruz
     return datetime.utcnow() + timedelta(hours=3)
 
 def get_full_time_options():
@@ -243,11 +242,9 @@ def get_full_time_options():
 FULL_TIME_OPTIONS = get_full_time_options()
 
 def generate_dynamic_time_options(selected_date):
-    """Seçilen tarihe göre geçmiş saatleri gizleyen dinamik fonksiyon"""
     times = []
     now_tr = get_turkey_time()
     
-    # Seçilen tarih bugün mü kontrolü
     is_today = (selected_date == now_tr.date())
     current_time_str = now_tr.strftime("%H:%M")
     
@@ -258,7 +255,6 @@ def generate_dynamic_time_options(selected_date):
                 
             time_str = f"{h:02d}:{m}"
             
-            # Eğer tarih bugünse ve saat şu anki saatten küçükse listeye ekleme
             if is_today:
                 if time_str > current_time_str:
                     times.append(time_str)
@@ -396,14 +392,11 @@ def view_booking_page():
         package = st.selectbox(t["package"], list(PACKAGE_PRICES.keys()))
     with col2:
         people = st.number_input(t["people"], min_value=1, max_value=10)
-        # Tarih seçimini saatten ÖNCE alıyoruz ki saati tarihe göre güncelleyebilelim
         date = st.date_input(t["date"], min_value=get_turkey_time().date())
         
-        # Seçilen tarihe göre saat listesini dinamik oluşturuyoruz
         available_times = generate_dynamic_time_options(date)
         
         if not available_times:
-            # Eğer gün bittiyse ve bugün için saat kalmadıysa uyarı ver
             st.error(t["err_notime"])
             time_val = None
         else:
@@ -426,7 +419,6 @@ def view_booking_page():
         elif pickup_needed and not hotel:
             st.error(t["err_hotel"])
         elif not time_val:
-            # Saat boşsa hata ver (Günün bitmesi durumu)
             st.error(t["err_invalid_time"])
         else:
             if check_capacity(str(date), time_val):
@@ -523,8 +515,9 @@ def view_admin_page():
         with col_chart:
             st.write("**En Çok Tercih Edilen Paketler**")
             if pkg_counts:
-                chart_data = pd.DataFrame(list(pkg_counts.items()), columns=["Paket", "Sayı"]).set_index("Paket")
-                st.bar_chart(chart_data)
+                # GRAFİK RENKLENDİRİLMESİ DEĞİŞTİRİLDİ: Artık her paket ayrı bir renkle gösterilecek
+                chart_data = pd.DataFrame(list(pkg_counts.items()), columns=["Paket", "Sayı"])
+                st.bar_chart(chart_data, x="Paket", y="Sayı", color="Paket")
             else:
                 st.info("Henüz yeterli veri yok.")
         
@@ -608,14 +601,16 @@ def view_admin_page():
                 else:
                     st.write(f"### 📝 ID: #{selected_id} Düzenleniyor")
                     
+                    # WHATSAPP BUTONU TASARIMI YENİLENDİ: Daha koyu yeşil, okunaklı font ve hafif gölge eklendi
                     phone_val = str(selected_data.get("phone", "")).strip()
                     if phone_val:
                         clean_phone = ''.join(filter(str.isdigit, phone_val))
                         if clean_phone:
                             wa_url = f"https://wa.me/{clean_phone}"
                             st.markdown(f'<a href="{wa_url}" target="_blank" style="text-decoration: none;">'
-                                        f'<div style="background-color: #25D366; color: white; text-align: center; '
-                                        f'padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: bold;">'
+                                        f'<div style="background-color: #128C7E; color: #ffffff; text-align: center; '
+                                        f'padding: 12px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; '
+                                        f'font-size: 16px; letter-spacing: 0.5px; box-shadow: 0px 2px 5px rgba(0,0,0,0.2);">'
                                         f'💬 Müşteriye WhatsApp\'tan Yaz ({phone_val})</div></a>', 
                                         unsafe_allow_html=True)
 
@@ -637,8 +632,6 @@ def view_admin_page():
                                 parsed_date = get_turkey_time().date()
                                 
                             new_date = st.date_input("Tarih", value=parsed_date)
-                            
-                            # Admin paneli hata düzeltme ihtimaline karşı tüm saatleri gösterir
                             saat_index = FULL_TIME_OPTIONS.index(selected_data["time"]) if selected_data.get("time") in FULL_TIME_OPTIONS else 0
                             new_time = st.selectbox("Saat", FULL_TIME_OPTIONS, index=saat_index)
                             new_hotel = st.text_input("Otel/Transfer", value=selected_data["hotel"])
