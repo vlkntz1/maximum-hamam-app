@@ -409,7 +409,7 @@ def view_booking_page():
             encoded_msg = urllib.parse.quote(final_msg)
             whatsapp_url = f"https://wa.me/{business_phone}?text={encoded_msg}"
             
-            st.markdown(f"### 👉 [{t['wa_link']}]({whatsapp_url})"
+            st.markdown(f"### 👉 [{t['wa_link']}]({whatsapp_url})")
 
 
 # B. Yönetici (Admin) Sayfası İçeriği
