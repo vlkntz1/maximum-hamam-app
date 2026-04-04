@@ -351,19 +351,24 @@ def get_status_counts():
 # ==========================================
 st.set_page_config(page_title="Maximum Hamam Booking", page_icon="🧖‍♂️", layout="wide")
 
-# CSS KISMI GÜNCELLENDİ: Github, Fork vb. butonları tamamen gizliyoruz. Sadece menü ikonunu bırakıyoruz.
+# CSS GÜNCELLENDİ: Üst bardaki Fork, Github gibi butonları kesin olarak gizleyen kodlar eklendi
 st.markdown("""
     <style>
     .main { background-color: #fdfaf0; }
     h1, h2, h3 { color: #b8860b; }
     .stButton>button { background-color: #25D366; color: white; width: 100%; border-radius: 8px;} 
     div[data-baseweb="select"], div[data-baseweb="select"] * { cursor: pointer !important; }
-    a.header-anchor { display: none !important; }
     
-    /* Streamlit Cloud Butonlarını (Fork, GitHub, Deploy) Gizle */
-    header .stAppDeployButton { display: none !important; }
-    header [data-testid="stToolbar"] a { display: none !important; }
+    /* Streamlit'in kendi iconlarını gizle, sadece ana menü butonunu bırak */
+    a.header-anchor { display: none !important; }
+    .viewerBadge_container { display: none !important; }
+    .viewerBadge_link { display: none !important; }
+    div[data-testid="viewerBadge"] { display: none !important; }
+    
+    /* Header içindeki tüm bağlantıları (linkleri) gizler, 3 noktalı buton görünmeye devam eder */
+    header a { display: none !important; }
     header [data-testid="stToolbarShareButton"] { display: none !important; }
+    header [data-testid="stAppDeployButton"] { display: none !important; }
     </style>
     """, unsafe_allow_html=True)
 
