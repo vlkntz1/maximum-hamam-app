@@ -272,7 +272,7 @@ def generate_dynamic_time_options(selected_date):
     return times
 
 # ==========================================
-# 1. GOOGLE SHEETS DATABASE FUNCTIONS (OPTIMİZE EDİLDİ)
+# 1. GOOGLE SHEETS DATABASE FUNCTIONS
 # ==========================================
 @st.cache_resource
 def get_sheet():
@@ -337,11 +337,21 @@ def delete_booking(booking_id):
             sheet.delete_rows(i + 2)
             break
 
+def get_status_counts():
+    sheet = get_sheet()
+    records = sheet.get_all_records()
+    counts = {}
+    for r in records:
+        status = r.get('status', 'Bekliyor')
+        counts[status] = counts.get(status, 0) + 1
+    return counts
+
 # ==========================================
 # 2. APP CONFIGURATION & STYLING
 # ==========================================
 st.set_page_config(page_title="Maximum Hamam Booking", page_icon="🧖‍♂️", layout="wide")
 
+# CSS KISMI GÜNCELLENDİ: Github, Fork vb. butonları tamamen gizliyoruz. Sadece menü ikonunu bırakıyoruz.
 st.markdown("""
     <style>
     .main { background-color: #fdfaf0; }
@@ -349,6 +359,11 @@ st.markdown("""
     .stButton>button { background-color: #25D366; color: white; width: 100%; border-radius: 8px;} 
     div[data-baseweb="select"], div[data-baseweb="select"] * { cursor: pointer !important; }
     a.header-anchor { display: none !important; }
+    
+    /* Streamlit Cloud Butonlarını (Fork, GitHub, Deploy) Gizle */
+    header .stAppDeployButton { display: none !important; }
+    header [data-testid="stToolbar"] a { display: none !important; }
+    header [data-testid="stToolbarShareButton"] { display: none !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -472,7 +487,7 @@ def view_booking_page():
                 st.rerun()
 
 
-# B. Yönetici (Admin) Sayfası İçeriği (OPTIMİZE EDİLDİ)
+# B. Yönetici (Admin) Sayfası İçeriği
 def view_admin_page():
     col_title, col_refresh = st.columns([8, 2])
     with col_title:
@@ -614,11 +629,9 @@ def view_admin_page():
                     st.warning(f"⚠️ ID #{selected_id} numaralı rezervasyonu tamamen silmek istediğinize emin misiniz? Bu işlem geri alınamaz!")
                     col_yes, col_no = st.columns(2)
                     with col_yes:
-                        # ===== HATA ÇÖZÜMÜ BURADA YAPILDI =====
                         if st.button("Evet, Sil", type="primary"):
                             delete_booking(selected_id)
                             st.session_state.confirm_delete = False 
-                            # Değer atamak yerine hafızadan temizliyoruz, hata engelleniyor!
                             if "admin_selectbox" in st.session_state:
                                 del st.session_state["admin_selectbox"]
                             if "prev_table_selection" in st.session_state:
