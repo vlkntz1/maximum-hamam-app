@@ -9,7 +9,7 @@ import pandas as pd
 from google.oauth2.service_account import Credentials
 
 # ==========================================
-# 0. TRANSLATIONS (DİL SÖZLÜĞÜ) - GÜNCELLENDİ
+# 0. TRANSLATIONS (DİL SÖZLÜĞÜ)
 # ==========================================
 LANGUAGES = {
     "🇬🇧 English": {
@@ -250,7 +250,6 @@ def check_capacity(date_str, time_str):
     sheet = get_sheet()
     records = sheet.get_all_records()
     for r in records:
-        # Eğer statü iptal değilse ve aynı saatte kayıt varsa True (Doludur) döndür
         if str(r.get('date')) == date_str and str(r.get('time')) == time_str and r.get('status') not in ['İptal', 'İptal Edilen']:
             return True
     return False
@@ -291,7 +290,7 @@ def update_booking(booking_id, name, phone, package, people, date, time, hotel, 
         if str(row['id']) == str(booking_id):
             row_idx = i + 2 
             updated_row = [booking_id, name, phone, package, people, str(date), str(time), hotel, notes, row['timestamp'], status]
-            sheet.update(values=[updated_row], range_name=f"A{row_idx}:K{row_idx}") # K sütununa kadar genişledi
+            sheet.update(values=[updated_row], range_name=f"A{row_idx}:K{row_idx}")
             break
 
 def delete_booking(booking_id):
@@ -349,15 +348,13 @@ def view_booking_page():
     col1, col2 = st.columns(2)
     with col1:
         name = st.text_input(t["name"])
-        phone = st.text_input(t["phone"]) # Yeni Telefon Alanı
+        phone = st.text_input(t["phone"])
         package = st.selectbox(t["package"], list(PACKAGE_PRICES.keys()))
     with col2:
         people = st.number_input(t["people"], min_value=1, max_value=10)
-        # Geçmiş tarihleri engellemek için min_value eklendi
         date = st.date_input(t["date"], min_value=datetime.today().date())
         time_val = st.selectbox(t["time"], TIME_OPTIONS)
     
-    # Dinamik Fiyat Hesaplama ve Gösterme
     total_price = PACKAGE_PRICES[package] * people
     st.info(f"💶 **{t['total_price']} {total_price}€**")
     
@@ -375,7 +372,6 @@ def view_booking_page():
         elif pickup_needed and not hotel:
             st.error(t["err_hotel"])
         else:
-            # Kapasite Kontrolü (Aynı tarihte ve saatte kayıt var mı?)
             if check_capacity(str(date), time_val):
                 st.error(t["err_cap"])
             else:
@@ -451,14 +447,12 @@ def view_admin_page():
         raw_records = sheet.get_all_records()
         valid_records = [r for r in raw_records if r.get('status') != 'İptal']
         
-        # Grafik Verileri Oluşturma
         pkg_counts = {}
         for r in valid_records:
             p = r.get('package', '')
             if p:
                 pkg_counts[p] = pkg_counts.get(p, 0) + 1
                 
-        # Metricler ve Grafik için Sütunlar
         col_metrics, col_chart = st.columns([2, 3])
         
         with col_metrics:
@@ -555,8 +549,24 @@ def view_admin_page():
                             st.session_state.confirm_delete = False 
                             st.rerun()
                 else:
+                    st.write(f"### 📝 ID: #{selected_id} Düzenleniyor")
+                    
+                    # ==========================================
+                    # YENİ EKLENEN WHATSAPP BUTONU
+                    # ==========================================
+                    phone_val = str(selected_data.get("phone", "")).strip()
+                    if phone_val:
+                        # Numaradaki boşluk, +, () gibi işaretleri temizleyip sadece rakamları alıyoruz
+                        clean_phone = ''.join(filter(str.isdigit, phone_val))
+                        if clean_phone:
+                            wa_url = f"https://wa.me/{clean_phone}"
+                            st.markdown(f'<a href="{wa_url}" target="_blank" style="text-decoration: none;">'
+                                        f'<div style="background-color: #25D366; color: white; text-align: center; '
+                                        f'padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: bold;">'
+                                        f'💬 Müşteriye WhatsApp\'tan Yaz ({phone_val})</div></a>', 
+                                        unsafe_allow_html=True)
+
                     with st.form("edit_form"):
-                        st.write(f"**ID: #{selected_id} Düzenleniyor**")
                         status_options = ["Bekliyor", "Onaylandı", "Geldi", "Gelmedi", "İptal"]
                         new_status = st.selectbox("Durum *", status_options, index=status_options.index(selected_data["status"]))
                         
