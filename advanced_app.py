@@ -6,6 +6,7 @@ import io
 import json
 import gspread
 import pandas as pd
+import re  # Telefon numarası kontrolü için eklendi
 from google.oauth2.service_account import Credentials
 
 # ==========================================
@@ -29,6 +30,7 @@ LANGUAGES = {
         "total_price": "Estimated Total:",
         "err_name": "Please enter your Full Name.",
         "err_phone": "Please enter your Phone Number.",
+        "err_phone_format": "⚠️ Please enter a valid phone number (e.g., +905... or 05...).",
         "err_hotel": "Please provide your Hotel Name so we can arrange your driver.",
         "err_cap": "⚠️ Sorry, this date and time slot is already booked. Please select another time.",
         "err_notime": "⚠️ No available time slots left for today. Please select another date.",
@@ -63,6 +65,7 @@ LANGUAGES = {
         "total_price": "Tahmini Toplam Tutar:",
         "err_name": "Lütfen Adınızı ve Soyadınızı giriniz.",
         "err_phone": "Lütfen Telefon Numaranızı giriniz.",
+        "err_phone_format": "⚠️ Lütfen geçerli bir numara girin (Harf kullanmayın, Örn: +905... veya 05...).",
         "err_hotel": "Şoförümüzün sizi alabilmesi için lütfen Otel Adını giriniz.",
         "err_cap": "⚠️ Üzgünüz, seçtiğiniz tarih ve saat doludur. Lütfen farklı bir saat seçin.",
         "err_notime": "⚠️ Bugün için uygun saat kalmamıştır. Lütfen yarın veya ileri bir tarih seçin.",
@@ -97,6 +100,7 @@ LANGUAGES = {
         "total_price": "Geschätzte Gesamtsumme:",
         "err_name": "Bitte geben Sie Ihren Namen ein.",
         "err_phone": "Bitte geben Sie Ihre Telefonnummer ein.",
+        "err_phone_format": "⚠️ Bitte geben Sie eine gültige Telefonnummer ein (z.B. +90...).",
         "err_hotel": "Bitte geben Sie Ihren Hotelnamen an.",
         "err_cap": "⚠️ Diese Zeit ist bereits gebucht. Bitte wählen Sie eine andere.",
         "err_notime": "⚠️ Heute sind keine Termine mehr frei. Bitte wählen Sie ein anderes Datum.",
@@ -124,6 +128,7 @@ LANGUAGES = {
         "total_price": "Geschatte Totaalprijs:",
         "err_name": "Vul uw naam in.",
         "err_phone": "Vul uw telefoonnummer in.",
+        "err_phone_format": "⚠️ Voer een geldig telefoonnummer in (bijv. +90...).",
         "err_hotel": "Geef uw hotelnaam op.",
         "err_cap": "⚠️ Deze tijd is al geboekt. Kies een andere tijd.",
         "err_notime": "⚠️ Geen beschikbare tijden meer voor vandaag. Kies een andere datum.",
@@ -151,6 +156,7 @@ LANGUAGES = {
         "total_price": "Geschatte Totaalprijs:",
         "err_name": "Vul uw naam in.",
         "err_phone": "Vul uw telefoonnummer in.",
+        "err_phone_format": "⚠️ Voer een geldig telefoonnummer in (bijv. +90...).",
         "err_hotel": "Geef uw hotelnaam op.",
         "err_cap": "⚠️ Deze tijd is al geboekt. Kies een andere tijd.",
         "err_notime": "⚠️ Geen beschikbare tijden meer voor vandaag. Kies een andere datum.",
@@ -178,6 +184,7 @@ LANGUAGES = {
         "total_price": "Total Estimé:",
         "err_name": "Veuillez entrer votre nom.",
         "err_phone": "Veuillez entrer votre téléphone.",
+        "err_phone_format": "⚠️ Veuillez entrer un numéro valide (ex: +90...).",
         "err_hotel": "Veuillez indiquer l'hôtel.",
         "err_cap": "⚠️ Cette heure est déjà réservée. Veuillez en choisir une autre.",
         "err_notime": "⚠️ Plus de créneaux disponibles pour aujourd'hui. Veuillez choisir une autre date.",
@@ -205,6 +212,7 @@ LANGUAGES = {
         "total_price": "Uppskattat Pris:",
         "err_name": "Ange ditt namn.",
         "err_phone": "Ange ditt telefonnummer.",
+        "err_phone_format": "⚠️ Ange ett giltigt telefonnummer (t.ex. +90...).",
         "err_hotel": "Ange hotellnamn.",
         "err_cap": "⚠️ Denna tid är redan bokad. Välj en annan.",
         "err_notime": "⚠️ Inga lediga tider kvar idag. Välj ett annat datum.",
@@ -412,10 +420,17 @@ def view_booking_page():
     submit = st.button(t["btn_save"], type="primary")
     
     if submit:
+        # TELEFON NUMARASI KONTROLÜ (Regex)
+        # Boşlukları ve tireleri geçici olarak silip formatı test ediyoruz
+        cleaned_phone_for_test = phone.replace(" ", "").replace("-", "").strip()
+        
         if not name:
             st.error(t["err_name"])
         elif not phone:
             st.error(t["err_phone"])
+        elif not re.match(r"^\+?[0-9]{7,15}$", cleaned_phone_for_test):
+            # Eğer harf varsa veya 7 haneden kısaysa hata ver
+            st.error(t["err_phone_format"])
         elif pickup_needed and not hotel:
             st.error(t["err_hotel"])
         elif not time_val:
@@ -424,7 +439,9 @@ def view_booking_page():
             if check_capacity(str(date), time_val):
                 st.error(t["err_cap"])
             else:
-                booking_id = add_booking(name, phone, package, people, date, time_val, hotel, notes)
+                # Numarayı boşluklardan ve harflerden tamamen arındırıp veritabanına tertemiz kaydediyoruz
+                final_phone = cleaned_phone_for_test
+                booking_id = add_booking(name, final_phone, package, people, date, time_val, hotel, notes)
                 st.success(f"{t['success']}, {name}! (ID: #{booking_id})")
                 
                 business_phone = "905396690127"
@@ -432,7 +449,7 @@ def view_booking_page():
                 msg_local = f"{t['wa_greet']}\n"
                 msg_local += f"{t['wa_id']}: #{booking_id}\n"
                 msg_local += f"{t['wa_name']}: {name}\n"
-                msg_local += f"{t['wa_phone']}: {phone}\n"
+                msg_local += f"{t['wa_phone']}: {final_phone}\n"
                 msg_local += f"{t['wa_pack']}: {package}\n"
                 msg_local += f"{t['wa_ppl']}: {people}\n"
                 msg_local += f"{t['wa_date']}: {date}\n"
@@ -449,7 +466,7 @@ def view_booking_page():
                     msg_eng = f"\n--- ENGLISH ---\n{t_en['wa_greet']}\n"
                     msg_eng += f"Reservation ID: #{booking_id}\n"
                     msg_eng += f"Name: {name}\n"
-                    msg_eng += f"Phone: {phone}\n"
+                    msg_eng += f"Phone: {final_phone}\n"
                     msg_eng += f"Package: {package}\n"
                     msg_eng += f"People: {people}\n"
                     msg_eng += f"Date: {date}\n"
@@ -515,7 +532,6 @@ def view_admin_page():
         with col_chart:
             st.write("**En Çok Tercih Edilen Paketler**")
             if pkg_counts:
-                # GRAFİK RENKLENDİRİLMESİ DEĞİŞTİRİLDİ: Artık her paket ayrı bir renkle gösterilecek
                 chart_data = pd.DataFrame(list(pkg_counts.items()), columns=["Paket", "Sayı"])
                 st.bar_chart(chart_data, x="Paket", y="Sayı", color="Paket")
             else:
@@ -601,7 +617,6 @@ def view_admin_page():
                 else:
                     st.write(f"### 📝 ID: #{selected_id} Düzenleniyor")
                     
-                    # WHATSAPP BUTONU TASARIMI YENİLENDİ: Daha koyu yeşil, okunaklı font ve hafif gölge eklendi
                     phone_val = str(selected_data.get("phone", "")).strip()
                     if phone_val:
                         clean_phone = ''.join(filter(str.isdigit, phone_val))
