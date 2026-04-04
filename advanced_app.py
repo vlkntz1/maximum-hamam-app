@@ -373,15 +373,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ==========================================
-# 3. LANGUAGE SELECTOR
-# ==========================================
-col_empty, col_lang = st.columns([8, 2])
-with col_lang:
-    selected_lang = st.selectbox("Language", options=list(LANGUAGES.keys()), index=0, label_visibility="collapsed")
-
-t = LANGUAGES[selected_lang]
-t_en = LANGUAGES["🇬🇧 English"]
 
 # ==========================================
 # 4. SAYFA GÖRÜNÜMLERİ
@@ -389,15 +380,22 @@ t_en = LANGUAGES["🇬🇧 English"]
 
 # A. Müşteri Rezervasyon Sayfası İçeriği
 def view_booking_page():
+    
+    # DİL SEÇİCİSİ SADECE MÜŞTERİ SAYFASINDA GÖRÜNECEK ŞEKİLDE BURAYA TAŞINDI
+    col_empty, col_lang = st.columns([8, 2])
+    with col_lang:
+        selected_lang = st.selectbox("Language", options=list(LANGUAGES.keys()), index=0, label_visibility="collapsed")
+
+    t = LANGUAGES[selected_lang]
+    t_en = LANGUAGES["🇬🇧 English"]
+    
     st.title(t["title"], anchor=False)
     st.subheader(t["sub"], anchor=False)
     st.write(t["desc"])
     
-    # Formu yenilemek için dinamik anahtar
     if "form_key" not in st.session_state:
         st.session_state.form_key = 0
         
-    # Eğer başarılı bir kayıt yapıldıysa mesajı en üstte göster ve state'den sil
     if "success_data" in st.session_state:
         st.success(st.session_state.success_data["msg"])
         st.markdown(st.session_state.success_data["link"])
@@ -407,7 +405,6 @@ def view_booking_page():
     
     col1, col2 = st.columns(2)
     with col1:
-        # Alanlara dinamik anahtarlar atandı (fk)
         name = st.text_input(t["name"], key=f"name_{fk}")
         phone = st.text_input(t["phone"], key=f"phone_{fk}")
         package = st.selectbox(t["package"], list(PACKAGE_PRICES.keys()), key=f"pkg_{fk}")
@@ -489,7 +486,6 @@ def view_booking_page():
                 encoded_msg = urllib.parse.quote(final_msg)
                 whatsapp_url = f"https://wa.me/{business_phone}?text={encoded_msg}"
                 
-                # Başarılı kayıt sonrası bilgileri state'e kaydet ve formu yenilemek için anahtarı değiştir
                 st.session_state.success_data = {
                     "msg": f"{t['success']}, {name}! (ID: #{booking_id})",
                     "link": f"### 👉 [{t['wa_link']}]({whatsapp_url})"
