@@ -222,6 +222,41 @@ LANGUAGES = {
         "wa_greet": "Hej! Jag bekräftar min bokning:",
         "wa_id": "ID", "wa_name": "Namn", "wa_phone": "Telefon", "wa_pack": "Paket", 
         "wa_ppl": "Personer", "wa_date": "Datum", "wa_time": "Tid", "wa_pick": "Hotell", "wa_notes": "Noteringar"
+    },
+    "🇪🇹 አማርኛ (Amharic)": {
+        "title": "Maximum Hamam & Spa",
+        "sub": "በኩሳዳሲ የቅንጦት የቱርክ መታጠቢያ ቦታ ማስያዝ",
+        "desc": "ቦታ ማስያዝዎን ለመጠየቅ እባክዎ ከዚህ በታች ያለውን ቅጽ ይሙሉ። በዋትስአፕ በኩል እናረጋግጣለን።",
+        "name": "ሙሉ ስም *",
+        "phone": "የዋትስአፕ / ስልክ ቁጥር *",
+        "package": "ጥቅል ይምረጡ",
+        "people": "የሰዎች ብዛት",
+        "date": "የተመረጠበት ቀን",
+        "time": "የተመረጠበት ሰዓት",
+        "pickup": "በኩሳዳሲ ውስጥ ነፃ ማጓጓዣ እፈልጋለሁ",
+        "hotel": "የሆቴል ስም / አድራሻ (ማጓጓዣ ካላስፈለገ ባዶ ይተዉት)",
+        "notes": "ልዩ ጥያቄዎች (አለርጂዎች፣ የግፊት ምርጫ፣ ወዘተ.)",
+        "btn_save": "የቦታ ማስያዣ ዝርዝሮችን ያስቀምጡ",
+        "total_price": "የተገመተ ጠቅላላ:",
+        "err_name": "እባክዎ ሙሉ ስምዎን ያስገቡ።",
+        "err_phone": "እባክዎ የስልክ ቁጥርዎን ያስገቡ።",
+        "err_phone_format": "⚠️ እባክዎ ትክክለኛ የስልክ ቁጥር ያስገቡ (ለምሳሌ፣ +905... ወይም 05...)።",
+        "err_hotel": "አሽከርካሪዎን ማዘጋጀት እንድንችል እባክዎ የሆቴል ስምዎን ያቅርቡ።",
+        "err_cap": "⚠️ ይቅርታ፣ ይህ የቀን እና የሰዓት ቦታ አስቀድሞ ተይዟል። እባክዎ ሌላ ሰዓት ይምረጡ።",
+        "err_notime": "⚠️ ዛሬ ምንም የሚገኙ የሰዓት ቦታዎች የሉም። እባክዎ ሌላ ቀን ይምረጡ።",
+        "err_invalid_time": "እባክዎ ትክክለኛ ሰዓት ይምረጡ።",
+        "success": "ዝርዝሮች በተሳካ ሁኔታ ተቀምጠዋል",
+        "wa_link": "👉 እነዚህን ዝርዝሮች ወደ ዋትስአፕ ለመላክ እና ቦታ ማስያዝዎን ለማረጋገጥ እዚህ ጠቅ ያድርጉ!",
+        "wa_greet": "ሰላም Maximum Hamam! ቦታ ማስያዜን ማረጋገጥ እፈልጋለሁ:",
+        "wa_id": "የቦታ ማስያዣ መታወቂያ",
+        "wa_name": "ስም",
+        "wa_phone": "ስልክ",
+        "wa_pack": "ጥቅል",
+        "wa_ppl": "ሰዎች",
+        "wa_date": "ቀን",
+        "wa_time": "ሰዓት",
+        "wa_pick": "መውሰጃ ሆቴል",
+        "wa_notes": "ማስታወሻዎች"
     }
 }
 
@@ -351,7 +386,6 @@ def get_status_counts():
 # ==========================================
 st.set_page_config(page_title="Maximum Hamam Booking", page_icon="🧖‍♂️", layout="wide")
 
-# CSS GÜNCELLENDİ: Üst bardaki Fork, Github gibi butonları kesin olarak gizleyen kodlar eklendi
 st.markdown("""
     <style>
     .main { background-color: #fdfaf0; }
