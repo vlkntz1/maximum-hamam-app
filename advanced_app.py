@@ -398,13 +398,11 @@ st.markdown("""
     .stButton>button { background-color: #25D366; color: white; width: 100%; border-radius: 8px;} 
     div[data-baseweb="select"], div[data-baseweb="select"] * { cursor: pointer !important; }
     
-    /* Streamlit'in kendi iconlarını gizle, sadece ana menü butonunu bırak */
     a.header-anchor { display: none !important; }
     .viewerBadge_container { display: none !important; }
     .viewerBadge_link { display: none !important; }
     div[data-testid="viewerBadge"] { display: none !important; }
     
-    /* Header içindeki tüm bağlantıları (linkleri) gizler, 3 noktalı buton görünmeye devam eder */
     header a { display: none !important; }
     header [data-testid="stToolbarShareButton"] { display: none !important; }
     header [data-testid="stAppDeployButton"] { display: none !important; }
@@ -630,7 +628,7 @@ def view_admin_page():
                     mime="text/csv",
                 )
                 
-        # HATA DÜZELTMESİ (Hafıza Yönetimi) BURADA YAPILDI
+        # --- HAFIZA VE YENİLEME YÖNETİMİ ---
         if not filtered_records:
             st.info("Bu kritere uygun rezervasyon bulunamadı.")
         else:
@@ -658,11 +656,16 @@ def view_admin_page():
             available_ids = [row["id"] for row in filtered_records]
             dropdown_options = ["Seçiniz..."] + available_ids
             
-            current_val = st.session_state.get("admin_selectbox", "Seçiniz...")
-            if current_val not in dropdown_options:
+            if st.session_state.admin_selectbox not in dropdown_options:
                 st.session_state.admin_selectbox = "Seçiniz..."
                 
-            selected_id = st.selectbox("İşlem Yapılacak ID Seçin:", dropdown_options, key="admin_selectbox")
+            # HATA ÇÖZÜMÜ: Widget'a 'key' vermek yerine listeyi Index ile okutuyoruz!
+            idx = dropdown_options.index(st.session_state.admin_selectbox)
+            selected_id = st.selectbox("İşlem Yapılacak ID Seçin:", dropdown_options, index=idx)
+            
+            if selected_id != st.session_state.admin_selectbox:
+                st.session_state.admin_selectbox = selected_id
+                st.rerun()
             
             if "confirm_delete" not in st.session_state:
                 st.session_state.confirm_delete = False
@@ -677,6 +680,8 @@ def view_admin_page():
                         if st.button("Evet, Sil", type="primary"):
                             delete_booking(selected_id)
                             st.session_state.confirm_delete = False 
+                            
+                            # İŞLEM BİTTİĞİNDE SADECE NORMAL DEĞİŞKENLERİ SIFIRLIYORUZ
                             st.session_state.admin_selectbox = "Seçiniz..."
                             st.session_state.prev_table_selection = []
                             st.rerun() 
@@ -732,6 +737,10 @@ def view_admin_page():
                     if btn_update:
                         update_booking(selected_id, new_name, new_phone, new_package, new_people, new_date, new_time, new_hotel, new_notes, new_status)
                         st.success(f"ID #{selected_id} başarıyla güncellendi!")
+                        
+                        # İŞLEM BİTTİĞİNDE SADECE NORMAL DEĞİŞKENLERİ SIFIRLIYORUZ
+                        st.session_state.admin_selectbox = "Seçiniz..."
+                        st.session_state.prev_table_selection = []
                         st.rerun() 
                         
                     if btn_delete:
