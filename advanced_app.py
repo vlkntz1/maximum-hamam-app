@@ -32,7 +32,7 @@ LANGUAGES = {
         "err_phone": "Please enter your Phone Number.",
         "err_phone_format": "⚠️ Please enter a valid phone number (e.g., +905... or 05...).",
         "err_hotel": "Please provide your Hotel Name so we can arrange your driver.",
-        "err_cap": "⚠️ Sorry, this date and time slot is already booked. Please select another time.",
+        "err_cap": "⚠️ Sorry, this date and time slot is already fully booked. Please select another time.",
         "err_notime": "⚠️ No available time slots left for today. Please select another date.",
         "err_invalid_time": "Please select a valid time.",
         "success": "Details saved successfully",
@@ -67,7 +67,7 @@ LANGUAGES = {
         "err_phone": "Lütfen Telefon Numaranızı giriniz.",
         "err_phone_format": "⚠️ Lütfen geçerli bir numara girin (Harf kullanmayın, Örn: +905... veya 05...).",
         "err_hotel": "Şoförümüzün sizi alabilmesi için lütfen Otel Adını giriniz.",
-        "err_cap": "⚠️ Üzgünüz, seçtiğiniz tarih ve saat doludur. Lütfen farklı bir saat seçin.",
+        "err_cap": "⚠️ Üzgünüz, seçtiğiniz tarih ve saat tamamen doludur. Lütfen farklı bir saat seçin.",
         "err_notime": "⚠️ Bugün için uygun saat kalmamıştır. Lütfen yarın veya ileri bir tarih seçin.",
         "err_invalid_time": "Lütfen geçerli bir saat seçin.",
         "success": "Bilgiler başarıyla kaydedildi",
@@ -102,7 +102,7 @@ LANGUAGES = {
         "err_phone": "Bitte geben Sie Ihre Telefonnummer ein.",
         "err_phone_format": "⚠️ Bitte geben Sie eine gültige Telefonnummer ein (z.B. +90...).",
         "err_hotel": "Bitte geben Sie Ihren Hotelnamen an.",
-        "err_cap": "⚠️ Diese Zeit ist bereits gebucht. Bitte wählen Sie eine andere.",
+        "err_cap": "⚠️ Diese Zeit ist bereits ausgebucht. Bitte wählen Sie eine andere.",
         "err_notime": "⚠️ Heute sind keine Termine mehr frei. Bitte wählen Sie ein anderes Datum.",
         "err_invalid_time": "Bitte wählen Sie eine gültige Zeit.",
         "success": "Erfolgreich gespeichert",
@@ -130,7 +130,7 @@ LANGUAGES = {
         "err_phone": "Vul uw telefoonnummer in.",
         "err_phone_format": "⚠️ Voer een geldig telefoonnummer in (bijv. +90...).",
         "err_hotel": "Geef uw hotelnaam op.",
-        "err_cap": "⚠️ Deze tijd is al geboekt. Kies een andere tijd.",
+        "err_cap": "⚠️ Deze tijd is al volgeboekt. Kies een andere tijd.",
         "err_notime": "⚠️ Geen beschikbare tijden meer voor vandaag. Kies een andere datum.",
         "err_invalid_time": "Kies een geldige tijd.",
         "success": "Succesvol opgeslagen",
@@ -158,7 +158,7 @@ LANGUAGES = {
         "err_phone": "Vul uw telefoonnummer in.",
         "err_phone_format": "⚠️ Voer een geldig telefoonnummer in (bijv. +90...).",
         "err_hotel": "Geef uw hotelnaam op.",
-        "err_cap": "⚠️ Deze tijd is al geboekt. Kies een andere tijd.",
+        "err_cap": "⚠️ Deze tijd is al volgeboekt. Kies een andere tijd.",
         "err_notime": "⚠️ Geen beschikbare tijden meer voor vandaag. Kies een andere datum.",
         "err_invalid_time": "Kies een geldige tijd.",
         "success": "Succesvol opgeslagen",
@@ -186,7 +186,7 @@ LANGUAGES = {
         "err_phone": "Veuillez entrer votre téléphone.",
         "err_phone_format": "⚠️ Veuillez entrer un numéro valide (ex: +90...).",
         "err_hotel": "Veuillez indiquer l'hôtel.",
-        "err_cap": "⚠️ Cette heure est déjà réservée. Veuillez en choisir une autre.",
+        "err_cap": "⚠️ Cette heure est déjà complète. Veuillez en choisir une autre.",
         "err_notime": "⚠️ Plus de créneaux disponibles pour aujourd'hui. Veuillez choisir une autre date.",
         "err_invalid_time": "Veuillez choisir une heure valide.",
         "success": "Enregistré avec succès",
@@ -214,7 +214,7 @@ LANGUAGES = {
         "err_phone": "Ange ditt telefonnummer.",
         "err_phone_format": "⚠️ Ange ett giltigt telefonnummer (t.ex. +90...).",
         "err_hotel": "Ange hotellnamn.",
-        "err_cap": "⚠️ Denna tid är redan bokad. Välj en annan.",
+        "err_cap": "⚠️ Denna tid är redan fullbokad. Välj en annan.",
         "err_notime": "⚠️ Inga lediga tider kvar idag. Välj ett annat datum.",
         "err_invalid_time": "Välj en giltig tid.",
         "success": "Sparat framgångsrikt",
@@ -242,7 +242,7 @@ LANGUAGES = {
         "err_phone": "እባክዎ የስልክ ቁጥርዎን ያስገቡ።",
         "err_phone_format": "⚠️ እባክዎ ትክክለኛ የስልክ ቁጥር ያስገቡ (ለምሳሌ፣ +905... ወይም 05...)።",
         "err_hotel": "አሽከርካሪዎን ማዘጋጀት እንድንችል እባክዎ የሆቴል ስምዎን ያቅርቡ።",
-        "err_cap": "⚠️ ይቅርታ፣ ይህ የቀን እና የሰዓት ቦታ አስቀድሞ ተይዟል። እባክዎ ሌላ ሰዓት ይምረጡ።",
+        "err_cap": "⚠️ ይቅርታ፣ ይህ የቀን እና የሰዓት ቦታ ሙሉ በሙሉ ተይዟል። እባክዎ ሌላ ሰዓት ይምረጡ።",
         "err_notime": "⚠️ ዛሬ ምንም የሚገኙ የሰዓት ቦታዎች የሉም። እባክዎ ሌላ ቀን ይምረጡ።",
         "err_invalid_time": "እባክዎ ትክክለኛ ሰዓት ይምረጡ።",
         "success": "ዝርዝሮች በተሳካ ሁኔታ ተቀምጠዋል",
@@ -330,12 +330,18 @@ def init_db():
         sheet.append_row(headers)
 
 def check_capacity(date_str, time_str):
+    # KAPASİTE KONTROLÜ DEĞİŞTİRİLDİ (AYNI SAATE MAKSİMUM 2 REZERVASYON)
     sheet = get_sheet()
     records = sheet.get_all_records()
+    booking_count = 0
+    
     for r in records:
         if str(r.get('date')) == date_str and str(r.get('time')) == time_str and r.get('status') not in ['İptal', 'İptal Edilen']:
-            return True
-    return False
+            booking_count += 1
+            
+    if booking_count >= 2:
+        return True # Eğer 2 rezervasyon varsa dolu döner (True)
+    return False # 0 veya 1 rezervasyon varsa müsait döner (False)
 
 def add_booking(name, phone, package, people, date, time, hotel, notes):
     sheet = get_sheet()
