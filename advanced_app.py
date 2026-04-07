@@ -330,7 +330,6 @@ def init_db():
         sheet.append_row(headers)
 
 def check_capacity(date_str, time_str):
-    # KAPASİTE KONTROLÜ DEĞİŞTİRİLDİ (AYNI SAATE MAKSİMUM 2 REZERVASYON)
     sheet = get_sheet()
     records = sheet.get_all_records()
     booking_count = 0
@@ -340,8 +339,8 @@ def check_capacity(date_str, time_str):
             booking_count += 1
             
     if booking_count >= 2:
-        return True # Eğer 2 rezervasyon varsa dolu döner (True)
-    return False # 0 veya 1 rezervasyon varsa müsait döner (False)
+        return True 
+    return False 
 
 def add_booking(name, phone, package, people, date, time, hotel, notes):
     sheet = get_sheet()
@@ -631,6 +630,7 @@ def view_admin_page():
                     mime="text/csv",
                 )
                 
+        # HATA DÜZELTMESİ (Hafıza Yönetimi) BURADA YAPILDI
         if not filtered_records:
             st.info("Bu kritere uygun rezervasyon bulunamadı.")
         else:
@@ -647,8 +647,7 @@ def view_admin_page():
                     selected_id_from_table = filtered_records[current_table_selection[0]]["id"]
                     st.session_state.admin_selectbox = selected_id_from_table
                 else:
-                    if "admin_selectbox" in st.session_state:
-                        del st.session_state["admin_selectbox"]
+                    st.session_state.admin_selectbox = "Seçiniz..."
                 st.session_state.prev_table_selection = current_table_selection
             
             st.divider()
@@ -659,7 +658,8 @@ def view_admin_page():
             available_ids = [row["id"] for row in filtered_records]
             dropdown_options = ["Seçiniz..."] + available_ids
             
-            if st.session_state.admin_selectbox not in dropdown_options:
+            current_val = st.session_state.get("admin_selectbox", "Seçiniz...")
+            if current_val not in dropdown_options:
                 st.session_state.admin_selectbox = "Seçiniz..."
                 
             selected_id = st.selectbox("İşlem Yapılacak ID Seçin:", dropdown_options, key="admin_selectbox")
@@ -677,10 +677,8 @@ def view_admin_page():
                         if st.button("Evet, Sil", type="primary"):
                             delete_booking(selected_id)
                             st.session_state.confirm_delete = False 
-                            if "admin_selectbox" in st.session_state:
-                                del st.session_state["admin_selectbox"]
-                            if "prev_table_selection" in st.session_state:
-                                st.session_state.prev_table_selection = []
+                            st.session_state.admin_selectbox = "Seçiniz..."
+                            st.session_state.prev_table_selection = []
                             st.rerun() 
                     with col_no:
                         if st.button("Hayır, İptal Et"):
