@@ -335,14 +335,14 @@ def check_capacity(date_str, time_str):
     booking_count = 0
     
     for r in records:
-        if str(r.get('date')) == date_str and str(r.get('time')) == time_str and r.get('status') not in ['İptal', 'İptal Edilen']:
+        if str(r.get('date')) == date_str and str(r.get('time')) == time_str and r.get('status') in ['Bekliyor', 'Onaylandı']:
             booking_count += 1
             
     if booking_count >= 2:
         return True 
     return False 
 
-def add_booking(name, phone, package, people, date, time, hotel, notes):
+def add_booking(name, phone, package, people, date_str, time, hotel, notes):
     sheet = get_sheet()
     records = sheet.get_all_records()
     
@@ -352,20 +352,20 @@ def add_booking(name, phone, package, people, date, time, hotel, notes):
         ids = [int(r['id']) for r in records if str(r.get('id', '')).isdigit()]
         new_id = max(ids) + 1 if ids else 1
         
-    timestamp = get_turkey_time().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = get_turkey_time().strftime("%d.%m.%Y %H:%M:%S")
     status = 'Bekliyor'
     
-    new_row = [new_id, name, phone, package, people, str(date), str(time), hotel, notes, timestamp, status]
+    new_row = [new_id, name, phone, package, people, date_str, str(time), hotel, notes, timestamp, status]
     sheet.append_row(new_row)
     return new_id
 
-def update_booking(booking_id, name, phone, package, people, date, time, hotel, notes, status):
+def update_booking(booking_id, name, phone, package, people, date_str, time, hotel, notes, status):
     sheet = get_sheet()
     records = sheet.get_all_records()
     for i, row in enumerate(records):
         if str(row['id']) == str(booking_id):
             row_idx = i + 2 
-            updated_row = [booking_id, name, phone, package, people, str(date), str(time), hotel, notes, row['timestamp'], status]
+            updated_row = [booking_id, name, phone, package, people, date_str, str(time), hotel, notes, row['timestamp'], status]
             sheet.update(values=[updated_row], range_name=f"A{row_idx}:K{row_idx}")
             break
 
@@ -466,6 +466,7 @@ def view_booking_page():
     
     if submit:
         cleaned_phone_for_test = phone.replace(" ", "").replace("-", "").strip()
+        formatted_date = date.strftime("%d.%m.%Y") # YENİ TARİH FORMATI (GG.AA.YYYY)
         
         if not name:
             st.error(t["err_name"])
@@ -478,11 +479,11 @@ def view_booking_page():
         elif not time_val:
             st.error(t["err_invalid_time"])
         else:
-            if check_capacity(str(date), time_val):
+            if check_capacity(formatted_date, time_val):
                 st.error(t["err_cap"])
             else:
                 final_phone = cleaned_phone_for_test
-                booking_id = add_booking(name, final_phone, package, people, date, time_val, hotel, notes)
+                booking_id = add_booking(name, final_phone, package, people, formatted_date, time_val, hotel, notes)
                 
                 business_phone = "905396690127"
                 
@@ -492,7 +493,7 @@ def view_booking_page():
                 msg_local += f"{t['wa_phone']}: {final_phone}\n"
                 msg_local += f"{t['wa_pack']}: {package}\n"
                 msg_local += f"{t['wa_ppl']}: {people}\n"
-                msg_local += f"{t['wa_date']}: {date}\n"
+                msg_local += f"{t['wa_date']}: {formatted_date}\n"
                 msg_local += f"{t['wa_time']}: {time_val}\n"
                 msg_local += f"Total: {total_price}€\n"
                 if hotel:
@@ -509,7 +510,7 @@ def view_booking_page():
                     msg_eng += f"Phone: {final_phone}\n"
                     msg_eng += f"Package: {package}\n"
                     msg_eng += f"People: {people}\n"
-                    msg_eng += f"Date: {date}\n"
+                    msg_eng += f"Date: {formatted_date}\n"
                     msg_eng += f"Time: {time_val}\n"
                     msg_eng += f"Total: {total_price}€\n"
                     if hotel:
@@ -628,7 +629,6 @@ def view_admin_page():
                     mime="text/csv",
                 )
                 
-        # --- HAFIZA VE YENİLEME YÖNETİMİ ---
         if not filtered_records:
             st.info("Bu kritere uygun rezervasyon bulunamadı.")
         else:
@@ -656,10 +656,10 @@ def view_admin_page():
             available_ids = [row["id"] for row in filtered_records]
             dropdown_options = ["Seçiniz..."] + available_ids
             
-            if st.session_state.admin_selectbox not in dropdown_options:
+            current_val = st.session_state.get("admin_selectbox", "Seçiniz...")
+            if current_val not in dropdown_options:
                 st.session_state.admin_selectbox = "Seçiniz..."
                 
-            # HATA ÇÖZÜMÜ: Widget'a 'key' vermek yerine listeyi Index ile okutuyoruz!
             idx = dropdown_options.index(st.session_state.admin_selectbox)
             selected_id = st.selectbox("İşlem Yapılacak ID Seçin:", dropdown_options, index=idx)
             
@@ -681,7 +681,6 @@ def view_admin_page():
                             delete_booking(selected_id)
                             st.session_state.confirm_delete = False 
                             
-                            # İŞLEM BİTTİĞİNDE SADECE NORMAL DEĞİŞKENLERİ SIFIRLIYORUZ
                             st.session_state.admin_selectbox = "Seçiniz..."
                             st.session_state.prev_table_selection = []
                             st.rerun() 
@@ -716,10 +715,14 @@ def view_admin_page():
                             new_people = st.number_input("Kişi Sayısı", min_value=1, value=int(selected_data["people"]))
                         
                         with col_e2:
+                            # ESKİ VE YENİ TARİH FORMATLARINI SORUNSUZ OKUMA SİSTEMİ
                             try:
-                                parsed_date = datetime.strptime(selected_data["date"], "%Y-%m-%d").date()
-                            except:
-                                parsed_date = get_turkey_time().date()
+                                parsed_date = datetime.strptime(str(selected_data["date"]), "%d.%m.%Y").date()
+                            except ValueError:
+                                try:
+                                    parsed_date = datetime.strptime(str(selected_data["date"]), "%Y-%m-%d").date()
+                                except:
+                                    parsed_date = get_turkey_time().date()
                                 
                             new_date = st.date_input("Tarih", value=parsed_date)
                             saat_index = FULL_TIME_OPTIONS.index(selected_data["time"]) if selected_data.get("time") in FULL_TIME_OPTIONS else 0
@@ -735,10 +738,10 @@ def view_admin_page():
                             btn_delete = st.form_submit_button("🗑️ Bu Rezervasyonu Sil")
                             
                     if btn_update:
-                        update_booking(selected_id, new_name, new_phone, new_package, new_people, new_date, new_time, new_hotel, new_notes, new_status)
+                        formatted_new_date = new_date.strftime("%d.%m.%Y")
+                        update_booking(selected_id, new_name, new_phone, new_package, new_people, formatted_new_date, new_time, new_hotel, new_notes, new_status)
                         st.success(f"ID #{selected_id} başarıyla güncellendi!")
                         
-                        # İŞLEM BİTTİĞİNDE SADECE NORMAL DEĞİŞKENLERİ SIFIRLIYORUZ
                         st.session_state.admin_selectbox = "Seçiniz..."
                         st.session_state.prev_table_selection = []
                         st.rerun() 
