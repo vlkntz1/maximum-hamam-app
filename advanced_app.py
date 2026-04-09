@@ -46,7 +46,8 @@ LANGUAGES = {
         "wa_date": "Date",
         "wa_time": "Time",
         "wa_pick": "Pick-up Hotel",
-        "wa_notes": "Notes"
+        "wa_notes": "Notes",
+        "btn_ok": "OK"
     },
     "🇹🇷 Türkçe": {
         "title": "Maximum Hamam & Spa",
@@ -81,7 +82,8 @@ LANGUAGES = {
         "wa_date": "Tarih",
         "wa_time": "Saat",
         "wa_pick": "Alınacak Otel",
-        "wa_notes": "Notlar"
+        "wa_notes": "Notlar",
+        "btn_ok": "Tamam"
     },
     "🇩🇪 Deutsch": {
         "title": "Maximum Hamam & Spa",
@@ -109,7 +111,8 @@ LANGUAGES = {
         "wa_link": "👉 Klicken Sie hier, um über WhatsApp zu bestätigen!",
         "wa_greet": "Hallo! Ich möchte meine Buchung bestätigen:",
         "wa_id": "ID", "wa_name": "Name", "wa_phone": "Telefon", "wa_pack": "Paket", 
-        "wa_ppl": "Personen", "wa_date": "Datum", "wa_time": "Uhrzeit", "wa_pick": "Abholung", "wa_notes": "Notizen"
+        "wa_ppl": "Personen", "wa_date": "Datum", "wa_time": "Uhrzeit", "wa_pick": "Abholung", "wa_notes": "Notizen",
+        "btn_ok": "OK"
     },
     "🇳🇱 Dutch": {
         "title": "Maximum Hamam & Spa",
@@ -137,7 +140,8 @@ LANGUAGES = {
         "wa_link": "👉 Klik hier om via WhatsApp te bevestigen!",
         "wa_greet": "Hallo! Ik bevestig mijn boeking:",
         "wa_id": "ID", "wa_name": "Naam", "wa_phone": "Telefoon", "wa_pack": "Pakket", 
-        "wa_ppl": "Personen", "wa_date": "Datum", "wa_time": "Tijd", "wa_pick": "Ophaalhotel", "wa_notes": "Opmerkingen"
+        "wa_ppl": "Personen", "wa_date": "Datum", "wa_time": "Tijd", "wa_pick": "Ophaalhotel", "wa_notes": "Opmerkingen",
+        "btn_ok": "OK"
     },
     "🇧🇪 Vlaams (Flemenkçe)": {
         "title": "Maximum Hamam & Spa",
@@ -165,7 +169,8 @@ LANGUAGES = {
         "wa_link": "👉 Klik hier om via WhatsApp te bevestigen!",
         "wa_greet": "Hallo! Ik bevestig mijn boeking:",
         "wa_id": "ID", "wa_name": "Naam", "wa_phone": "Telefoon", "wa_pack": "Pakket", 
-        "wa_ppl": "Personen", "wa_date": "Datum", "wa_time": "Tijd", "wa_pick": "Ophaalhotel", "wa_notes": "Opmerkingen"
+        "wa_ppl": "Personen", "wa_date": "Datum", "wa_time": "Tijd", "wa_pick": "Ophaalhotel", "wa_notes": "Opmerkingen",
+        "btn_ok": "OK"
     },
     "🇫🇷 Français": {
         "title": "Maximum Hamam & Spa",
@@ -193,7 +198,8 @@ LANGUAGES = {
         "wa_link": "👉 Cliquez ici pour confirmer sur WhatsApp!",
         "wa_greet": "Bonjour! Je confirme ma réservation:",
         "wa_id": "ID", "wa_name": "Nom", "wa_phone": "Téléphone", "wa_pack": "Forfait", 
-        "wa_ppl": "Personnes", "wa_date": "Date", "wa_time": "Heure", "wa_pick": "Hôtel", "wa_notes": "Notes"
+        "wa_ppl": "Personnes", "wa_date": "Date", "wa_time": "Heure", "wa_pick": "Hôtel", "wa_notes": "Notes",
+        "btn_ok": "OK"
     },
     "🇸🇪 Svenska": {
         "title": "Maximum Hamam & Spa",
@@ -221,7 +227,8 @@ LANGUAGES = {
         "wa_link": "👉 Klicka här för att bekräfta på WhatsApp!",
         "wa_greet": "Hej! Jag bekräftar min bokning:",
         "wa_id": "ID", "wa_name": "Namn", "wa_phone": "Telefon", "wa_pack": "Paket", 
-        "wa_ppl": "Personer", "wa_date": "Datum", "wa_time": "Tid", "wa_pick": "Hotell", "wa_notes": "Noteringar"
+        "wa_ppl": "Personer", "wa_date": "Datum", "wa_time": "Tid", "wa_pick": "Hotell", "wa_notes": "Noteringar",
+        "btn_ok": "OK"
     },
     "🇪🇹 አማርኛ (Amharic)": {
         "title": "Maximum Hamam & Spa",
@@ -256,7 +263,8 @@ LANGUAGES = {
         "wa_date": "ቀን",
         "wa_time": "ሰዓት",
         "wa_pick": "መውሰጃ ሆቴል",
-        "wa_notes": "ማስታወሻዎች"
+        "wa_notes": "ማስታወሻዎች",
+        "btn_ok": "እሺ"
     }
 }
 
@@ -411,6 +419,15 @@ st.markdown("""
 
 
 # ==========================================
+# YENİ EKLENEN: POP-UP UYARI FONKSİYONU
+# ==========================================
+@st.dialog("⚠️")
+def popup_error(message, btn_text):
+    st.error(message)
+    if st.button(btn_text, use_container_width=True):
+        st.rerun()
+
+# ==========================================
 # 3. SAYFA GÖRÜNÜMLERİ
 # ==========================================
 
@@ -466,21 +483,22 @@ def view_booking_page():
     
     if submit:
         cleaned_phone_for_test = phone.replace(" ", "").replace("-", "").strip()
-        formatted_date = date.strftime("%d.%m.%Y") # YENİ TARİH FORMATI (GG.AA.YYYY)
+        formatted_date = date.strftime("%d.%m.%Y")
         
+        # Hataları artık POP-UP olarak gösteriyoruz:
         if not name:
-            st.error(t["err_name"])
+            popup_error(t["err_name"], t["btn_ok"])
         elif not phone:
-            st.error(t["err_phone"])
+            popup_error(t["err_phone"], t["btn_ok"])
         elif not re.match(r"^\+?[0-9]{7,15}$", cleaned_phone_for_test):
-            st.error(t["err_phone_format"])
+            popup_error(t["err_phone_format"], t["btn_ok"])
         elif pickup_needed and not hotel:
-            st.error(t["err_hotel"])
+            popup_error(t["err_hotel"], t["btn_ok"])
         elif not time_val:
-            st.error(t["err_invalid_time"])
+            popup_error(t["err_invalid_time"], t["btn_ok"])
         else:
             if check_capacity(formatted_date, time_val):
-                st.error(t["err_cap"])
+                popup_error(t["err_cap"], t["btn_ok"])
             else:
                 final_phone = cleaned_phone_for_test
                 booking_id = add_booking(name, final_phone, package, people, formatted_date, time_val, hotel, notes)
@@ -715,7 +733,6 @@ def view_admin_page():
                             new_people = st.number_input("Kişi Sayısı", min_value=1, value=int(selected_data["people"]))
                         
                         with col_e2:
-                            # ESKİ VE YENİ TARİH FORMATLARINI SORUNSUZ OKUMA SİSTEMİ
                             try:
                                 parsed_date = datetime.strptime(str(selected_data["date"]), "%d.%m.%Y").date()
                             except ValueError:
