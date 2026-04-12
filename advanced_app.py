@@ -485,7 +485,6 @@ def view_booking_page():
         cleaned_phone_for_test = phone.replace(" ", "").replace("-", "").strip()
         formatted_date = date.strftime("%d.%m.%Y")
         
-        # Hataları artık POP-UP olarak gösteriyoruz:
         if not name:
             popup_error(t["err_name"], t["btn_ok"])
         elif not phone:
@@ -723,7 +722,12 @@ def view_admin_page():
 
                     with st.form("edit_form"):
                         status_options = ["Bekliyor", "Onaylandı", "Geldi", "Gelmedi", "İptal"]
-                        new_status = st.selectbox("Durum *", status_options, index=status_options.index(selected_data["status"]))
+                        
+                        # --- HATA ÇÖZÜMÜ BURADA (Güvenli Index Bulma) ---
+                        current_status = str(selected_data.get("status", "")).strip()
+                        status_index = status_options.index(current_status) if current_status in status_options else 0
+                        new_status = st.selectbox("Durum *", status_options, index=status_index)
+                        # ------------------------------------------------
                         
                         col_e1, col_e2 = st.columns(2)
                         with col_e1:
