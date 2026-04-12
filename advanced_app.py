@@ -331,7 +331,6 @@ def get_sheet():
     sheet = gc.open("Maximum_Hamam_DB").sheet1
     return sheet
 
-# YENİ EKLENEN: Google Sheet'teki hatalı başlıkları/boşlukları tamamen bypass eden güvenli okuma fonksiyonu
 def fetch_all_records_safe():
     sheet = get_sheet()
     vals = sheet.get_all_values()
@@ -341,12 +340,9 @@ def fetch_all_records_safe():
     headers = vals[0]
     records = []
     for row in vals[1:]:
-        # Satır eksikse boşluklarla doldur
         padded_row = row + [''] * (len(headers) - len(row))
-        # Sadece ismi olan başlıkları sözlüğe ekle (Böylece duplicate hatası vermez)
         record = {headers[i]: padded_row[i] for i in range(len(headers)) if headers[i].strip() != ''}
         
-        # Sadece ID'si olan gerçek kayıtları al (Boş satırları atla)
         if str(record.get('id', '')).strip():
             records.append(record)
             
@@ -386,15 +382,14 @@ def add_booking(name, phone, package, people, date_str, time, hotel, notes):
     sheet.append_row(new_row)
     return new_id
 
-# GÜNCELLENEN: ID'yi tam satır numarasıyla bularak nokta atışı değiştirme (Çakışmaları önler)
+# --- HATALI KOMUT DÜZELTİLDİ: col_values(1) ---
 def update_booking(booking_id, name, phone, package, people, date_str, time, hotel, notes, status):
     sheet = get_sheet()
-    ids_column = sheet.get_col_values(1) # Sadece 1. sütunu (ID sütunu) çeker
+    ids_column = sheet.col_values(1) 
     
     for i, val in enumerate(ids_column):
         if str(val) == str(booking_id):
             row_idx = i + 1
-            # Gerçek kaydın zaman damgasını korumak için satırı okuruz
             row_data = sheet.row_values(row_idx)
             timestamp = row_data[9] if len(row_data) > 9 else get_turkey_time().strftime("%d.%m.%Y %H:%M:%S")
             
@@ -402,10 +397,10 @@ def update_booking(booking_id, name, phone, package, people, date_str, time, hot
             sheet.update(values=[updated_row], range_name=f"A{row_idx}:K{row_idx}")
             break
 
-# GÜNCELLENEN: ID'yi tam satır numarasıyla bularak nokta atışı silme
+# --- HATALI KOMUT DÜZELTİLDİ: col_values(1) ---
 def delete_booking(booking_id):
     sheet = get_sheet()
-    ids_column = sheet.get_col_values(1)
+    ids_column = sheet.col_values(1)
     for i, val in enumerate(ids_column):
         if str(val) == str(booking_id):
             sheet.delete_rows(i + 1)
@@ -596,12 +591,14 @@ def view_admin_page():
     if st.session_state.admin_logged_in:
         st.success("Sisteme başarıyla giriş yapıldı.")
         
-        # --- ARTIK BOZUK/BOŞ SÜTUNLARI ATLAYARAK OKUYOR ---
         if "admin_records_cache" not in st.session_state:
-            st.session_state.admin_records_cache = fetch_all_records_safe()
+            try:
+                st.session_state.admin_records_cache = fetch_all_records_safe()
+            except Exception as e:
+                st.error(f"⚠️ Google Sheets'ten veri çekilemedi! Gerçek Hata Mesajı:\n\n`{str(e)}`\n\n Lütfen bu kodu bana gönder.")
+                st.stop()
                 
         all_records = st.session_state.admin_records_cache
-        # ---------------------------------------------------
             
         st.subheader("📊 İşletme Analizleri ve Özet", anchor=False)
         
@@ -674,7 +671,6 @@ def view_admin_page():
         if not filtered_records:
             st.info("Bu kritere uygun rezervasyon bulunamadı.")
         else:
-            # --- YENİ STREAMLIT SEÇİM SİSTEMİ (Key olmadan, hatasız) ---
             if "active_id" not in st.session_state:
                 st.session_state.active_id = "Seçiniz..."
             if "prev_table_selection" not in st.session_state:
@@ -698,7 +694,6 @@ def view_admin_page():
             available_ids = [row["id"] for row in filtered_records]
             dropdown_options = ["Seçiniz..."] + available_ids
             
-            # Selectbox'a bilerek bir "key" VERMEDİK. Böylece hata vermeden istediğimiz gibi değiştirebiliriz.
             idx = dropdown_options.index(st.session_state.active_id) if st.session_state.active_id in dropdown_options else 0
             selected_id_from_box = st.selectbox("İşlem Yapılacak ID Seçin:", dropdown_options, index=idx)
             
@@ -707,7 +702,6 @@ def view_admin_page():
                 st.rerun()
                 
             selected_id = st.session_state.active_id
-            # -----------------------------------------------------------
             
             if "confirm_delete" not in st.session_state:
                 st.session_state.confirm_delete = False
