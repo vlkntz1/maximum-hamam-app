@@ -417,7 +417,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-
 # ==========================================
 # YENİ EKLENEN: POP-UP UYARI FONKSİYONU
 # ==========================================
@@ -546,7 +545,6 @@ def view_booking_page():
                 st.session_state.form_key += 1
                 st.rerun()
 
-
 # B. Yönetici (Admin) Sayfası İçeriği
 def view_admin_page():
     col_title, col_refresh = st.columns([8, 2])
@@ -555,7 +553,6 @@ def view_admin_page():
         st.subheader("Yönetici Paneli (Admin Dashboard)", anchor=False)
     with col_refresh:
         if st.button("🔄 Listeyi Yenile"):
-            # Yenile tuşuna basılınca hafızadaki (cache) veriyi sileriz ki Google'dan yenisini çeksin
             if "admin_records_cache" in st.session_state:
                 del st.session_state["admin_records_cache"]
             st.rerun()
@@ -574,17 +571,17 @@ def view_admin_page():
     if st.session_state.admin_logged_in:
         st.success("Sisteme başarıyla giriş yapıldı.")
         
-        # --- YENİ CACHE SİSTEMİ BURADA ---
+        # --- GERÇEK HATAYI GÖSTEREN BÖLÜM ---
         if "admin_records_cache" not in st.session_state:
-            sheet = get_sheet()
             try:
+                sheet = get_sheet()
                 st.session_state.admin_records_cache = sheet.get_all_records()
             except Exception as e:
-                st.error("⚠️ Google Sheets API kota sınırına ulaştı (Kısa sürede çok fazla istek atıldı). Lütfen 60 saniye bekleyip yukarıdaki 'Listeyi Yenile' butonuna basın.")
+                st.error(f"⚠️ Google Sheets'ten veri çekilemedi! Gerçek Hata Mesajı:\n\n`{str(e)}`\n\n Lütfen bu kodu bana gönder.")
                 st.stop()
                 
         all_records = st.session_state.admin_records_cache
-        # --------------------------------
+        # ------------------------------------
             
         st.subheader("📊 İşletme Analizleri ve Özet", anchor=False)
         
@@ -706,7 +703,6 @@ def view_admin_page():
                             delete_booking(selected_id)
                             st.session_state.confirm_delete = False 
                             
-                            # Cache'i temizleyelim ki güncel listeyi çeksin
                             if "admin_records_cache" in st.session_state:
                                 del st.session_state["admin_records_cache"]
                             
@@ -773,7 +769,6 @@ def view_admin_page():
                         update_booking(selected_id, new_name, new_phone, new_package, new_people, formatted_new_date, new_time, new_hotel, new_notes, new_status)
                         st.success(f"ID #{selected_id} başarıyla güncellendi!")
                         
-                        # Cache'i temizleyelim ki güncel listeyi çeksin
                         if "admin_records_cache" in st.session_state:
                             del st.session_state["admin_records_cache"]
                         
