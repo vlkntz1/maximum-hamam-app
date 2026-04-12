@@ -555,6 +555,9 @@ def view_admin_page():
         st.subheader("Yönetici Paneli (Admin Dashboard)", anchor=False)
     with col_refresh:
         if st.button("🔄 Listeyi Yenile"):
+            # Yenile tuşuna basılınca hafızadaki (cache) veriyi sileriz ki Google'dan yenisini çeksin
+            if "admin_records_cache" in st.session_state:
+                del st.session_state["admin_records_cache"]
             st.rerun()
 
     if "admin_logged_in" not in st.session_state:
@@ -571,12 +574,17 @@ def view_admin_page():
     if st.session_state.admin_logged_in:
         st.success("Sisteme başarıyla giriş yapıldı.")
         
-        sheet = get_sheet()
-        try:
-            all_records = sheet.get_all_records()
-        except Exception as e:
-            st.error("Google Sheets bağlantısında geçici bir gecikme yaşandı. Lütfen saniyeler içinde tekrar deneyin.")
-            st.stop()
+        # --- YENİ CACHE SİSTEMİ BURADA ---
+        if "admin_records_cache" not in st.session_state:
+            sheet = get_sheet()
+            try:
+                st.session_state.admin_records_cache = sheet.get_all_records()
+            except Exception as e:
+                st.error("⚠️ Google Sheets API kota sınırına ulaştı (Kısa sürede çok fazla istek atıldı). Lütfen 60 saniye bekleyip yukarıdaki 'Listeyi Yenile' butonuna basın.")
+                st.stop()
+                
+        all_records = st.session_state.admin_records_cache
+        # --------------------------------
             
         st.subheader("📊 İşletme Analizleri ve Özet", anchor=False)
         
@@ -698,6 +706,10 @@ def view_admin_page():
                             delete_booking(selected_id)
                             st.session_state.confirm_delete = False 
                             
+                            # Cache'i temizleyelim ki güncel listeyi çeksin
+                            if "admin_records_cache" in st.session_state:
+                                del st.session_state["admin_records_cache"]
+                            
                             st.session_state.admin_selectbox = "Seçiniz..."
                             st.session_state.prev_table_selection = []
                             st.rerun() 
@@ -723,11 +735,9 @@ def view_admin_page():
                     with st.form("edit_form"):
                         status_options = ["Bekliyor", "Onaylandı", "Geldi", "Gelmedi", "İptal"]
                         
-                        # --- HATA ÇÖZÜMÜ BURADA (Güvenli Index Bulma) ---
                         current_status = str(selected_data.get("status", "")).strip()
                         status_index = status_options.index(current_status) if current_status in status_options else 0
                         new_status = st.selectbox("Durum *", status_options, index=status_index)
-                        # ------------------------------------------------
                         
                         col_e1, col_e2 = st.columns(2)
                         with col_e1:
@@ -762,6 +772,10 @@ def view_admin_page():
                         formatted_new_date = new_date.strftime("%d.%m.%Y")
                         update_booking(selected_id, new_name, new_phone, new_package, new_people, formatted_new_date, new_time, new_hotel, new_notes, new_status)
                         st.success(f"ID #{selected_id} başarıyla güncellendi!")
+                        
+                        # Cache'i temizleyelim ki güncel listeyi çeksin
+                        if "admin_records_cache" in st.session_state:
+                            del st.session_state["admin_records_cache"]
                         
                         st.session_state.admin_selectbox = "Seçiniz..."
                         st.session_state.prev_table_selection = []
