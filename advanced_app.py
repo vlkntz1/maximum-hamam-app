@@ -276,7 +276,7 @@ PACKAGE_PRICES = {
 }
 
 # ==========================================
-# 0.1. ZAMAN FONKSİYONLARI (TÜRKİYE SAATİ)
+# 0.1. ZAMAN FONKSİYONLARI
 # ==========================================
 def get_turkey_time():
     return datetime.utcnow() + timedelta(hours=3)
@@ -315,7 +315,7 @@ def generate_dynamic_time_options(selected_date):
     return times
 
 # ==========================================
-# 1. GOOGLE SHEETS DATABASE FUNCTIONS (YENİ GÜVENLİ SİSTEM)
+# 1. GOOGLE SHEETS DATABASE FUNCTIONS (HİZALAMA KORUMALI)
 # ==========================================
 @st.cache_resource
 def get_sheet():
@@ -339,11 +339,18 @@ def fetch_all_records_safe():
     
     headers = vals[0]
     records = []
-    for row in vals[1:]:
+    for i, row in enumerate(vals[1:]):
         padded_row = row + [''] * (len(headers) - len(row))
-        record = {headers[i]: padded_row[i] for i in range(len(headers)) if headers[i].strip() != ''}
+        record = {headers[j]: padded_row[j] for j in range(len(headers)) if headers[j].strip() != ''}
         
-        if str(record.get('id', '')).strip():
+        id_val = str(record.get('id', '')).strip()
+        name_val = str(record.get('name', '')).strip()
+        
+        if id_val:
+            records.append(record)
+        elif name_val:
+            # ID yanlışlıkla silindiyse rezervasyonu yine de göster (Kurtarma Modu)
+            record['id'] = f"KAYIP-ID-{i+2}"
             records.append(record)
             
     return records
@@ -378,11 +385,27 @@ def add_booking(name, phone, package, people, date_str, time, hotel, notes):
     timestamp = get_turkey_time().strftime("%d.%m.%Y %H:%M:%S")
     status = 'Bekliyor'
     
-    new_row = [new_id, name, phone, package, people, date_str, str(time), hotel, notes, timestamp, status]
-    sheet.append_row(new_row)
+    # ⚠️ ÇÖZÜM 1: SAĞA SOLA ATMAYI ÖNLEME
+    # Verilerin önüne tek tırnak (') eklenerek Google'a "Bunu Metin olarak algıla ve Sola hizala" emri veriliyor.
+    new_row = [
+        new_id, 
+        name, 
+        f"'{phone}", 
+        package, 
+        people, 
+        f"'{date_str}", 
+        f"'{time}", 
+        hotel, 
+        notes, 
+        timestamp, 
+        status
+    ]
+    
+    # ⚠️ ÇÖZÜM 2: BOŞLUK ATLAMA SORUNUNU ÇÖZME
+    # Artık "en alta" değil, her zaman başlıkların hemen altına (2. Satıra) eklenir. Asla aralık bırakmaz.
+    sheet.insert_row(new_row, 2, value_input_option='USER_ENTERED')
     return new_id
 
-# --- HATALI KOMUT DÜZELTİLDİ: col_values(1) ---
 def update_booking(booking_id, name, phone, package, people, date_str, time, hotel, notes, status):
     sheet = get_sheet()
     ids_column = sheet.col_values(1) 
@@ -393,11 +416,22 @@ def update_booking(booking_id, name, phone, package, people, date_str, time, hot
             row_data = sheet.row_values(row_idx)
             timestamp = row_data[9] if len(row_data) > 9 else get_turkey_time().strftime("%d.%m.%Y %H:%M:%S")
             
-            updated_row = [booking_id, name, phone, package, people, date_str, str(time), hotel, notes, timestamp, status]
+            updated_row = [
+                booking_id, 
+                name, 
+                f"'{phone}", 
+                package, 
+                people, 
+                f"'{date_str}", 
+                f"'{time}", 
+                hotel, 
+                notes, 
+                timestamp, 
+                status
+            ]
             sheet.update(values=[updated_row], range_name=f"A{row_idx}:K{row_idx}")
             break
 
-# --- HATALI KOMUT DÜZELTİLDİ: col_values(1) ---
 def delete_booking(booking_id):
     sheet = get_sheet()
     ids_column = sheet.col_values(1)
@@ -450,7 +484,7 @@ def popup_error(message, btn_text):
 # 3. SAYFA GÖRÜNÜMLERİ
 # ==========================================
 
-# A. Müşteri Rezervasyon Sayfası İçeriği
+# A. Müşteri Rezervasyon Sayfası
 def view_booking_page():
     
     col_empty, col_lang = st.columns([8, 2])
@@ -565,7 +599,7 @@ def view_booking_page():
                 st.session_state.form_key += 1
                 st.rerun()
 
-# B. Yönetici (Admin) Sayfası İçeriği
+# B. Yönetici (Admin) Sayfası
 def view_admin_page():
     col_title, col_refresh = st.columns([8, 2])
     with col_title:
@@ -595,7 +629,7 @@ def view_admin_page():
             try:
                 st.session_state.admin_records_cache = fetch_all_records_safe()
             except Exception as e:
-                st.error(f"⚠️ Google Sheets'ten veri çekilemedi! Gerçek Hata Mesajı:\n\n`{str(e)}`\n\n Lütfen bu kodu bana gönder.")
+                st.error(f"⚠️ Google Sheets'ten veri çekilemedi! Gerçek Hata Mesajı:\n\n`{str(e)}`")
                 st.stop()
                 
         all_records = st.session_state.admin_records_cache
@@ -648,9 +682,22 @@ def view_admin_page():
         else:
             filtered_records = list(all_records)
             
-        filtered_records.reverse()
+        # ⚠️ ÇÖZÜM 3: TARİH VE SAAT KRONOLOJİK SIRALAMASI
+        # Artık admin paneli verileri rastgele veya eklendiği sıraya göre değil, 
+        # rezervasyonun tarih ve saatine göre ip gibi sırayla dizilecek.
+        def parse_datetime_for_sort(r):
+            date_val = str(r.get('date', '')).replace("'", "").strip()
+            time_val = str(r.get('time', '')).replace("'", "").strip()
+            try:
+                return datetime.strptime(f"{date_val} {time_val}", "%d.%m.%Y %H:%M")
+            except:
+                return datetime(2099, 12, 31) # Hatalı formatları paneli çökertmeden en sona atar
+
+        filtered_records.sort(key=parse_datetime_for_sort)
+        
         columns = ['id', 'name', 'phone', 'package', 'people', 'date', 'time', 'hotel', 'notes', 'timestamp', 'status']
-        rows = [[str(r.get(c, "")) for c in columns] for r in filtered_records]
+        # Tırnak işaretlerini (hizalama için koyduğumuz) ekrandan gizleyerek sadece temiz metni gösteriyoruz
+        rows = [[str(r.get(c, "")).replace("'", "") for c in columns] for r in filtered_records]
         
         with col_down:
             st.write("") 
@@ -676,12 +723,14 @@ def view_admin_page():
             if "prev_table_selection" not in st.session_state:
                 st.session_state.prev_table_selection = []
 
-            event = st.dataframe(filtered_records, use_container_width=True, on_select="rerun", selection_mode="single-row")
+            # Streamlit Tablosunda sadece temiz verileri göstermek için DataFrame'i güncelliyoruz
+            df_display = pd.DataFrame(rows, columns=columns)
+            event = st.dataframe(df_display, use_container_width=True, on_select="rerun", selection_mode="single-row")
             
             current_table_selection = event.selection.rows
             if current_table_selection != st.session_state.prev_table_selection:
                 if current_table_selection:
-                    st.session_state.active_id = filtered_records[current_table_selection[0]]["id"]
+                    st.session_state.active_id = df_display.iloc[current_table_selection[0]]["id"]
                 else:
                     st.session_state.active_id = "Seçiniz..."
                 st.session_state.prev_table_selection = current_table_selection
@@ -691,7 +740,7 @@ def view_admin_page():
             st.subheader("⚙️ Rezervasyon Yönetim Konsolu", anchor=False)
             st.write("Değişiklik yapmak istediğiniz rezervasyonu **yukarıdaki tablodan tıklayarak** veya **aşağıdaki listeden** seçebilirsiniz.")
             
-            available_ids = [row["id"] for row in filtered_records]
+            available_ids = [str(r).replace("'", "") for r in df_display["id"].tolist()]
             dropdown_options = ["Seçiniz..."] + available_ids
             
             idx = dropdown_options.index(st.session_state.active_id) if st.session_state.active_id in dropdown_options else 0
@@ -707,7 +756,8 @@ def view_admin_page():
                 st.session_state.confirm_delete = False
             
             if selected_id != "Seçiniz...":
-                selected_data = next((item for item in filtered_records if item["id"] == selected_id), None)
+                # Editör için gerçek (bozulmamış) kaydı buluyoruz
+                selected_data = next((item for item in filtered_records if str(item["id"]).replace("'", "") == selected_id), None)
                 
                 if st.session_state.confirm_delete:
                     st.warning(f"⚠️ ID #{selected_id} numaralı rezervasyonu tamamen silmek istediğinize emin misiniz? Bu işlem geri alınamaz!")
@@ -730,7 +780,7 @@ def view_admin_page():
                 else:
                     st.write(f"### 📝 ID: #{selected_id} Düzenleniyor")
                     
-                    phone_val = str(selected_data.get("phone", "")).strip()
+                    phone_val = str(selected_data.get("phone", "")).replace("'", "").strip()
                     if phone_val:
                         clean_phone = ''.join(filter(str.isdigit, phone_val))
                         if clean_phone:
@@ -751,8 +801,8 @@ def view_admin_page():
                         
                         col_e1, col_e2 = st.columns(2)
                         with col_e1:
-                            new_name = st.text_input("Müşteri Adı", value=selected_data.get("name", ""))
-                            new_phone = st.text_input("Telefon", value=selected_data.get("phone", ""))
+                            new_name = st.text_input("Müşteri Adı", value=selected_data.get("name", "").replace("'", ""))
+                            new_phone = st.text_input("Telefon", value=phone_val)
                             new_package = st.selectbox("Paket", list(PACKAGE_PRICES.keys()), index=list(PACKAGE_PRICES.keys()).index(selected_data.get("package", list(PACKAGE_PRICES.keys())[0])) if selected_data.get("package") in PACKAGE_PRICES else 0)
                             try:
                                 ppl_val = int(selected_data.get("people", 1))
@@ -761,20 +811,23 @@ def view_admin_page():
                             new_people = st.number_input("Kişi Sayısı", min_value=1, value=ppl_val)
                         
                         with col_e2:
+                            clean_date = str(selected_data.get("date", "")).replace("'", "")
                             try:
-                                parsed_date = datetime.strptime(str(selected_data.get("date", "")), "%d.%m.%Y").date()
+                                parsed_date = datetime.strptime(clean_date, "%d.%m.%Y").date()
                             except ValueError:
                                 try:
-                                    parsed_date = datetime.strptime(str(selected_data.get("date", "")), "%Y-%m-%d").date()
+                                    parsed_date = datetime.strptime(clean_date, "%Y-%m-%d").date()
                                 except:
                                     parsed_date = get_turkey_time().date()
                                 
                             new_date = st.date_input("Tarih", value=parsed_date)
-                            saat_index = FULL_TIME_OPTIONS.index(selected_data.get("time")) if selected_data.get("time") in FULL_TIME_OPTIONS else 0
+                            
+                            clean_time = str(selected_data.get("time", "")).replace("'", "")
+                            saat_index = FULL_TIME_OPTIONS.index(clean_time) if clean_time in FULL_TIME_OPTIONS else 0
                             new_time = st.selectbox("Saat", FULL_TIME_OPTIONS, index=saat_index)
-                            new_hotel = st.text_input("Otel/Transfer", value=selected_data.get("hotel", ""))
+                            new_hotel = st.text_input("Otel/Transfer", value=selected_data.get("hotel", "").replace("'", ""))
                         
-                        new_notes = st.text_area("Notlar", value=selected_data.get("notes", ""))
+                        new_notes = st.text_area("Notlar", value=selected_data.get("notes", "").replace("'", ""))
                         
                         col_upd, col_del = st.columns(2)
                         with col_upd:
