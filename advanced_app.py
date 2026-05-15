@@ -133,7 +133,7 @@ LANGUAGES = {
         "err_phone": "Vul uw telefoonnummer in.",
         "err_phone_format": "⚠️ Voer een geldig telefoonnummer in (bijv. +90...).",
         "err_hotel": "Geef uw hotelnaam op.",
-        "err_cap": "⚠️ Deze tijd is al volgeboekt. Kies een andere tijd.",
+        "err_cap": "⚠️ Deze tijd is al volgeboekt. Kies bir andere tijd.",
         "err_notime": "⚠️ Geen beschikbare tijden meer voor vandaag. Kies een andere datum.",
         "err_invalid_time": "Kies een geldige tijd.",
         "success": "Succesvol opgeslagen",
@@ -227,7 +227,7 @@ LANGUAGES = {
         "wa_link": "👉 Klicka här för att bekräfta på WhatsApp!",
         "wa_greet": "Hej! Jag bekräftar min bokning:",
         "wa_id": "ID", "wa_name": "Namn", "wa_phone": "Telefon", "wa_pack": "Paket", 
-        "wa_ppl": "Personer", "wa_date": "Datum", "wa_time": "Tid", "wa_pick": "Hotell", "wa_notes": "Noteringar",
+        "wa_ppl": "Personen", "wa_date": "Datum", "wa_time": "Tid", "wa_pick": "Hotell", "wa_notes": "Noteringar",
         "btn_ok": "OK"
     },
     "🇪🇹 አማርኛ (Amharic)": {
@@ -253,7 +253,7 @@ LANGUAGES = {
         "err_notime": "⚠️ ዛሬ ምንም የሚገኙ የሰዓት ቦታዎች የሉም። እባክዎ ሌላ ቀን ይምረጡ።",
         "err_invalid_time": "እባክዎ ትክክለኛ ሰዓት ይምረጡ።",
         "success": "ዝርዝሮች በተሳካ ሁኔታ ተቀምጠዋል",
-        "wa_link": "👉 እነዚህን ዝርዝሮች ወደ ዋትስአፕ ለመላክ እና ቦታ ማስያዝዎን ለማረጋገጥ እዚህ ጠቅ ያድርጉ!",
+        "wa_link": "👉 እነዚህን ዝርዝሮች ወደ ዋትስአፕ ለመላክ ve ቦታ ማስያዝዎን ለማረጋገጥ እዚህ ጠቅ ያድርጉ!",
         "wa_greet": "ሰላም Maximum Hamam! ቦታ ማስያዜን ማረጋገጥ እፈልጋለሁ:",
         "wa_id": "የቦታ ማስያዣ መታወቂያ",
         "wa_name": "ስም",
@@ -385,8 +385,7 @@ def add_booking(name, phone, package, people, date_str, time, hotel, notes):
     timestamp = get_turkey_time().strftime("%d.%m.%Y %H:%M:%S")
     status = 'Bekliyor'
     
-    # ⚠️ ÇÖZÜM 1: SAĞA SOLA ATMAYI ÖNLEME
-    # Verilerin önüne tek tırnak (') eklenerek Google'a "Bunu Metin olarak algıla ve Sola hizala" emri veriliyor. (DÜZELTİLDİ: Tek tırnaklar kaldırıldı)
+    # ⚠️ ÇÖZÜM 1: SAĞA SOLA ATMAYI ÖNLEME (DÜZELTİLDİ: Tek tırnaklar kaldırıldı)
     new_row = [
         new_id, 
         name, 
@@ -404,6 +403,10 @@ def add_booking(name, phone, package, people, date_str, time, hotel, notes):
     # ⚠️ ÇÖZÜM 2: BOŞLUK ATLAMA SORUNUNU ÇÖZME
     # Artık "en alta" değil, her zaman başlıkların hemen altına (2. Satıra) eklenir. Asla aralık bırakmaz.
     sheet.insert_row(new_row, 2, value_input_option='USER_ENTERED')
+    
+    # ⚠️ ÇÖZÜM 4: OTOMATİK SIRALAMA (F sütunu tarih, G sütunu saat)
+    sheet.sort((6, 'asc'), (7, 'asc'))
+    
     return new_id
 
 def update_booking(booking_id, name, phone, package, people, date_str, time, hotel, notes, status):
@@ -416,6 +419,7 @@ def update_booking(booking_id, name, phone, package, people, date_str, time, hot
             row_data = sheet.row_values(row_idx)
             timestamp = row_data[9] if len(row_data) > 9 else get_turkey_time().strftime("%d.%m.%Y %H:%M:%S")
             
+            # DÜZELTİLDİ: Tek tırnaklar kaldırıldı
             updated_row = [
                 booking_id, 
                 name, 
@@ -430,6 +434,9 @@ def update_booking(booking_id, name, phone, package, people, date_str, time, hot
                 status
             ]
             sheet.update(values=[updated_row], range_name=f"A{row_idx}:K{row_idx}")
+            
+            # ⚠️ ÇÖZÜM 4: OTOMATİK SIRALAMA
+            sheet.sort((6, 'asc'), (7, 'asc'))
             break
 
 def delete_booking(booking_id):
@@ -683,20 +690,17 @@ def view_admin_page():
             filtered_records = list(all_records)
             
         # ⚠️ ÇÖZÜM 3: TARİH VE SAAT KRONOLOJİK SIRALAMASI
-        # Artık admin paneli verileri rastgele veya eklendiği sıraya göre değil, 
-        # rezervasyonun tarih ve saatine göre ip gibi sırayla dizilecek.
         def parse_datetime_for_sort(r):
             date_val = str(r.get('date', '')).replace("'", "").strip()
             time_val = str(r.get('time', '')).replace("'", "").strip()
             try:
                 return datetime.strptime(f"{date_val} {time_val}", "%d.%m.%Y %H:%M")
             except:
-                return datetime(2099, 12, 31) # Hatalı formatları paneli çökertmeden en sona atar
+                return datetime(2099, 12, 31) 
 
         filtered_records.sort(key=parse_datetime_for_sort)
         
         columns = ['id', 'name', 'phone', 'package', 'people', 'date', 'time', 'hotel', 'notes', 'timestamp', 'status']
-        # Tırnak işaretlerini (hizalama için koyduğumuz) ekrandan gizleyerek sadece temiz metni gösteriyoruz
         rows = [[str(r.get(c, "")).replace("'", "") for c in columns] for r in filtered_records]
         
         with col_down:
@@ -723,7 +727,6 @@ def view_admin_page():
             if "prev_table_selection" not in st.session_state:
                 st.session_state.prev_table_selection = []
 
-            # Streamlit Tablosunda sadece temiz verileri göstermek için DataFrame'i güncelliyoruz
             df_display = pd.DataFrame(rows, columns=columns)
             event = st.dataframe(df_display, use_container_width=True, on_select="rerun", selection_mode="single-row")
             
@@ -756,7 +759,6 @@ def view_admin_page():
                 st.session_state.confirm_delete = False
             
             if selected_id != "Seçiniz...":
-                # Editör için gerçek (bozulmamış) kaydı buluyoruz
                 selected_data = next((item for item in filtered_records if str(item["id"]).replace("'", "") == selected_id), None)
                 
                 if st.session_state.confirm_delete:
