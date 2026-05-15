@@ -386,15 +386,15 @@ def add_booking(name, phone, package, people, date_str, time, hotel, notes):
     status = 'Bekliyor'
     
     # ⚠️ ÇÖZÜM 1: SAĞA SOLA ATMAYI ÖNLEME
-    # Verilerin önüne tek tırnak (') eklenerek Google'a "Bunu Metin olarak algıla ve Sola hizala" emri veriliyor.
+    # Verilerin önüne tek tırnak (') eklenerek Google'a "Bunu Metin olarak algıla ve Sola hizala" emri veriliyor. (DÜZELTİLDİ: Tek tırnaklar kaldırıldı)
     new_row = [
         new_id, 
         name, 
-        f"'{phone}", 
+        phone, 
         package, 
         people, 
-        f"'{date_str}", 
-        f"'{time}", 
+        date_str, 
+        time, 
         hotel, 
         notes, 
         timestamp, 
@@ -419,11 +419,11 @@ def update_booking(booking_id, name, phone, package, people, date_str, time, hot
             updated_row = [
                 booking_id, 
                 name, 
-                f"'{phone}", 
+                phone, 
                 package, 
                 people, 
-                f"'{date_str}", 
-                f"'{time}", 
+                date_str, 
+                time, 
                 hotel, 
                 notes, 
                 timestamp, 
