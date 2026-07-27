@@ -562,7 +562,7 @@ def view_booking_page():
                 final_phone = cleaned_phone_for_test
                 booking_id = add_booking(name, final_phone, package, people, formatted_date, time_val, hotel, notes)
                 
-                business_phone = "905396690127"
+                business_phone = "905398303778"
                 
                 msg_local = f"{t['wa_greet']}\n"
                 msg_local += f"{t['wa_id']}: #{booking_id}\n"
