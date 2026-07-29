@@ -328,7 +328,9 @@ def get_sheet():
             
     credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     gc = gspread.authorize(credentials)
-    sheet = gc.open("Maximum_Hamam_DB").sheet1
+    
+    # ⚠️ YENİ TABLONUZUN ADINI BURAYA YAZINIZ. (Örnek: "Yeni_Hamam_DB")
+    sheet = gc.open("Yeni_Hamam_DB").sheet1 
     return sheet
 
 def fetch_all_records_safe():
@@ -349,7 +351,6 @@ def fetch_all_records_safe():
         if id_val:
             records.append(record)
         elif name_val:
-            # ID yanlışlıkla silindiyse rezervasyonu yine de göster (Kurtarma Modu)
             record['id'] = f"KAYIP-ID-{i+2}"
             records.append(record)
             
@@ -385,7 +386,6 @@ def add_booking(name, phone, package, people, date_str, time, hotel, notes):
     timestamp = get_turkey_time().strftime("%d.%m.%Y %H:%M:%S")
     status = 'Bekliyor'
     
-    # ⚠️ ÇÖZÜM 1: SAĞA SOLA ATMAYI ÖNLEME (DÜZELTİLDİ: Tek tırnaklar kaldırıldı)
     new_row = [
         new_id, 
         name, 
@@ -400,11 +400,10 @@ def add_booking(name, phone, package, people, date_str, time, hotel, notes):
         status
     ]
     
-    # ⚠️ ÇÖZÜM 2: BOŞLUK ATLAMA SORUNUNU ÇÖZME
-    # Artık "en alta" değil, her zaman başlıkların hemen altına (2. Satıra) eklenir. Asla aralık bırakmaz.
+    # ⚠️ YENİ TABLOYA KAYIT İŞLEMİ TEKRAR AKTİF EDİLDİ
     sheet.insert_row(new_row, 2, value_input_option='USER_ENTERED')
     
-    # ⚠️ ÇÖZÜM 4: OTOMATİK SIRALAMA (F sütunu tarih, G sütunu saat)
+    # ⚠️ OTOMATİK SIRALAMA (F sütunu tarih, G sütunu saat)
     sheet.sort((6, 'asc'), (7, 'asc'))
     
     return new_id
@@ -419,7 +418,6 @@ def update_booking(booking_id, name, phone, package, people, date_str, time, hot
             row_data = sheet.row_values(row_idx)
             timestamp = row_data[9] if len(row_data) > 9 else get_turkey_time().strftime("%d.%m.%Y %H:%M:%S")
             
-            # DÜZELTİLDİ: Tek tırnaklar kaldırıldı
             updated_row = [
                 booking_id, 
                 name, 
@@ -435,7 +433,6 @@ def update_booking(booking_id, name, phone, package, people, date_str, time, hot
             ]
             sheet.update(values=[updated_row], range_name=f"A{row_idx}:K{row_idx}")
             
-            # ⚠️ ÇÖZÜM 4: OTOMATİK SIRALAMA
             sheet.sort((6, 'asc'), (7, 'asc'))
             break
 
