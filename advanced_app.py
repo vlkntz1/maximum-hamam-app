@@ -328,9 +328,13 @@ def get_sheet():
             
     credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     gc = gspread.authorize(credentials)
-    
-    # ⚠️ YENİ TABLONUZUN ADINI BURAYA YAZINIZ. (Örnek: "Yeni_Hamam_DB")
     sheet = gc.open("Yeni_Hamam_DB").sheet1 
+    
+    # ⚠️ KORUMA: EĞER TABLO BOMBOŞSA BAŞLIKLARI OTOMATİK EKLE
+    if len(sheet.get_all_values()) == 0:
+        headers = ['id', 'name', 'phone', 'package', 'people', 'date', 'time', 'hotel', 'notes', 'timestamp', 'status']
+        sheet.append_row(headers)
+        
     return sheet
 
 def fetch_all_records_safe():
@@ -355,12 +359,6 @@ def fetch_all_records_safe():
             records.append(record)
             
     return records
-
-def init_db():
-    sheet = get_sheet()
-    if len(sheet.get_all_values()) == 0:
-        headers = ['id', 'name', 'phone', 'package', 'people', 'date', 'time', 'hotel', 'notes', 'timestamp', 'status']
-        sheet.append_row(headers)
 
 def check_capacity(date_str, time_str):
     records = fetch_all_records_safe()
@@ -400,11 +398,13 @@ def add_booking(name, phone, package, people, date_str, time, hotel, notes):
         status
     ]
     
-    # ⚠️ YENİ TABLOYA KAYIT İŞLEMİ TEKRAR AKTİF EDİLDİ
+    # Yeni Tabloya Kayıt
     sheet.insert_row(new_row, 2, value_input_option='USER_ENTERED')
     
-    # ⚠️ OTOMATİK SIRALAMA (F sütunu tarih, G sütunu saat)
-    sheet.sort((6, 'asc'), (7, 'asc'))
+    # ⚠️ KORUMA: BAŞLIKLARI KORUMAK İÇİN SADECE 2. SATIRDAN İTİBAREN SIRALAMA YAP
+    row_count = len(sheet.get_all_values())
+    if row_count > 1:
+        sheet.sort((6, 'asc'), (7, 'asc'), range=f"A2:K{row_count}")
     
     return new_id
 
@@ -433,7 +433,10 @@ def update_booking(booking_id, name, phone, package, people, date_str, time, hot
             ]
             sheet.update(values=[updated_row], range_name=f"A{row_idx}:K{row_idx}")
             
-            sheet.sort((6, 'asc'), (7, 'asc'))
+            # ⚠️ KORUMA: BAŞLIKLARI KORUMAK İÇİN SADECE 2. SATIRDAN İTİBAREN SIRALAMA YAP
+            row_count = len(sheet.get_all_values())
+            if row_count > 1:
+                sheet.sort((6, 'asc'), (7, 'asc'), range=f"A2:K{row_count}")
             break
 
 def delete_booking(booking_id):
