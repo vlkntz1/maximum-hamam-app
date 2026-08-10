@@ -274,20 +274,21 @@ PACKAGE_PRICES = {
     "Lux Turkish Bath - 70€": 70, "Relax Journey - 110€": 110, 
     "Luxury Mix - 125€": 125, "Sultan Journey - 200€": 200
 }
+
 # ==========================================
-# 0.1. ZAMAN FONKSİYONLARI
+# 0.1. ZAMAN FONKSİYONLARI (09:30 - 21:00 Arası)
 # ==========================================
 def get_turkey_time():
     return datetime.utcnow() + timedelta(hours=3)
 
 def get_full_time_options():
     times = []
-    for h in range(9, 22): # Saat 9'dan başlıyoruz
+    for h in range(9, 22):
         for m in ["00", "30"]:
-            if h == 9 and m == "00": 
-                continue # 09:00'ı atla, doğrudan 09:30'dan başlasın
+            if h == 9 and m == "00":
+                continue 
             if h == 21 and m == "30":
-                continue # 21:30'u atla, son saat 21:00 olsun
+                continue
             times.append(f"{h:02d}:{m}")
     return times
 
@@ -300,12 +301,12 @@ def generate_dynamic_time_options(selected_date):
     is_today = (selected_date == now_tr.date())
     current_time_str = now_tr.strftime("%H:%M")
     
-    for h in range(9, 22): # Saat 9'dan başlıyoruz
+    for h in range(9, 22):
         for m in ["00", "30"]:
             if h == 9 and m == "00":
-                continue # 09:00'ı atla
+                continue
             if h == 21 and m == "30":
-                continue # 21:30'u atla
+                continue
                 
             time_str = f"{h:02d}:{m}"
             
@@ -318,7 +319,7 @@ def generate_dynamic_time_options(selected_date):
     return times
 
 # ==========================================
-# 1. GOOGLE SHEETS DATABASE FUNCTIONS (HİZALAMA KORUMALI)
+# 1. GOOGLE SHEETS DATABASE FUNCTIONS
 # ==========================================
 @st.cache_resource
 def get_sheet():
@@ -333,7 +334,6 @@ def get_sheet():
     gc = gspread.authorize(credentials)
     sheet = gc.open("Yeni_Hamam_DB").sheet1 
     
-    # ⚠️ KORUMA: EĞER TABLO BOMBOŞSA BAŞLIKLARI OTOMATİK EKLE
     if len(sheet.get_all_values()) == 0:
         headers = ['id', 'name', 'phone', 'package', 'people', 'date', 'time', 'hotel', 'notes', 'timestamp', 'status']
         sheet.append_row(headers)
@@ -401,10 +401,8 @@ def add_booking(name, phone, package, people, date_str, time, hotel, notes):
         status
     ]
     
-    # Yeni Tabloya Kayıt
     sheet.insert_row(new_row, 2, value_input_option='USER_ENTERED')
     
-    # ⚠️ KORUMA: BAŞLIKLARI KORUMAK İÇİN SADECE 2. SATIRDAN İTİBAREN SIRALAMA YAP
     row_count = len(sheet.get_all_values())
     if row_count > 1:
         sheet.sort((6, 'asc'), (7, 'asc'), range=f"A2:K{row_count}")
@@ -436,7 +434,6 @@ def update_booking(booking_id, name, phone, package, people, date_str, time, hot
             ]
             sheet.update(values=[updated_row], range_name=f"A{row_idx}:K{row_idx}")
             
-            # ⚠️ KORUMA: BAŞLIKLARI KORUMAK İÇİN SADECE 2. SATIRDAN İTİBAREN SIRALAMA YAP
             row_count = len(sheet.get_all_values())
             if row_count > 1:
                 sheet.sort((6, 'asc'), (7, 'asc'), range=f"A2:K{row_count}")
@@ -565,24 +562,22 @@ def view_booking_page():
                 final_phone = cleaned_phone_for_test
                 booking_id = add_booking(name, final_phone, package, people, formatted_date, time_val, hotel, notes)
                 
-               business_phone = "905398303778"
+                business_phone = "905398303778"
                 
-                # WhatsApp mesajını daha doğal ve konuşma dilinde oluşturuyoruz
+                # WhatsApp mesajını en sade ve doğal konuşma dilinde oluşturuyoruz
                 if selected_lang == "🇹🇷 Türkçe":
                     final_msg = (
-                        f"Merhaba Maximum Hamam! 👋\n\n"
+                        f"Merhaba 👋\n\n"
                         f"Ben {name}. {formatted_date} tarihinde saat {time_val} için rezervasyon yaptırmak istiyorum.\n"
-                        f"{people} kişilik '{package}' paketini seçtik. (Tahmini Toplam: {total_price}€)\n\n"
-                        f"İletişim numaram: {final_phone}.\n"
+                        f"{people} kişilik '{package}' paketini seçtik.\n\n"
                         f"Onayınızı bekliyorum, teşekkürler! ✨"
                     )
                 else:
                     # Yabancı turistler için ortak İngilizce dil gönderimi
                     final_msg = (
-                        f"Hello Maximum Hamam! 👋\n\n"
+                        f"Hello 👋\n\n"
                         f"My name is {name}. I would like to make a reservation for {formatted_date} at {time_val}.\n"
-                        f"We would like the '{package}' package for {people} person(s). (Estimated Total: {total_price}€)\n\n"
-                        f"My phone number is {final_phone}.\n"
+                        f"We would like the '{package}' package for {people} person(s).\n\n"
                         f"Waiting for your confirmation, thank you! ✨"
                     )
                 
@@ -679,7 +674,6 @@ def view_admin_page():
         else:
             filtered_records = list(all_records)
             
-        # ⚠️ ÇÖZÜM 3: TARİH VE SAAT KRONOLOJİK SIRALAMASI
         def parse_datetime_for_sort(r):
             date_val = str(r.get('date', '')).replace("'", "").strip()
             time_val = str(r.get('time', '')).replace("'", "").strip()
