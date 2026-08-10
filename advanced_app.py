@@ -565,39 +565,26 @@ def view_booking_page():
                 final_phone = cleaned_phone_for_test
                 booking_id = add_booking(name, final_phone, package, people, formatted_date, time_val, hotel, notes)
                 
-                business_phone = "905398303778"
+               business_phone = "905398303778"
                 
-                msg_local = f"{t['wa_greet']}\n"
-                msg_local += f"{t['wa_id']}: #{booking_id}\n"
-                msg_local += f"{t['wa_name']}: {name}\n"
-                msg_local += f"{t['wa_phone']}: {final_phone}\n"
-                msg_local += f"{t['wa_pack']}: {package}\n"
-                msg_local += f"{t['wa_ppl']}: {people}\n"
-                msg_local += f"{t['wa_date']}: {formatted_date}\n"
-                msg_local += f"{t['wa_time']}: {time_val}\n"
-                msg_local += f"Total: {total_price}€\n"
-                if hotel:
-                    msg_local += f"{t['wa_pick']}: {hotel}\n"
-                if notes:
-                    msg_local += f"{t['wa_notes']}: {notes}\n"
-                
-                final_msg = msg_local 
-                
-                if selected_lang != "🇬🇧 English":
-                    msg_eng = f"\n--- ENGLISH ---\n{t_en['wa_greet']}\n"
-                    msg_eng += f"Reservation ID: #{booking_id}\n"
-                    msg_eng += f"Name: {name}\n"
-                    msg_eng += f"Phone: {final_phone}\n"
-                    msg_eng += f"Package: {package}\n"
-                    msg_eng += f"People: {people}\n"
-                    msg_eng += f"Date: {formatted_date}\n"
-                    msg_eng += f"Time: {time_val}\n"
-                    msg_eng += f"Total: {total_price}€\n"
-                    if hotel:
-                        msg_eng += f"Pick-up Hotel: {hotel}\n"
-                    if notes:
-                        msg_eng += f"Notes: {notes}\n"
-                    final_msg += msg_eng 
+                # WhatsApp mesajını daha doğal ve konuşma dilinde oluşturuyoruz
+                if selected_lang == "🇹🇷 Türkçe":
+                    final_msg = (
+                        f"Merhaba Maximum Hamam! 👋\n\n"
+                        f"Ben {name}. {formatted_date} tarihinde saat {time_val} için rezervasyon yaptırmak istiyorum.\n"
+                        f"{people} kişilik '{package}' paketini seçtik. (Tahmini Toplam: {total_price}€)\n\n"
+                        f"İletişim numaram: {final_phone}.\n"
+                        f"Onayınızı bekliyorum, teşekkürler! ✨"
+                    )
+                else:
+                    # Yabancı turistler için ortak İngilizce dil gönderimi
+                    final_msg = (
+                        f"Hello Maximum Hamam! 👋\n\n"
+                        f"My name is {name}. I would like to make a reservation for {formatted_date} at {time_val}.\n"
+                        f"We would like the '{package}' package for {people} person(s). (Estimated Total: {total_price}€)\n\n"
+                        f"My phone number is {final_phone}.\n"
+                        f"Waiting for your confirmation, thank you! ✨"
+                    )
                 
                 encoded_msg = urllib.parse.quote(final_msg)
                 whatsapp_url = f"https://wa.me/{business_phone}?text={encoded_msg}"
