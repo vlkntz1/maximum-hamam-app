@@ -592,7 +592,7 @@ def view_booking_page():
                             final_msg = (
                                 f"Hello\n\n"
                                 f"My name is {name}. I would like to make a reservation for {formatted_date} at {time_val}.\n"
-                                f"We would like the '{package}' package for {people} person(s).\n\n"
+                                f"We would like the '{package}' package for {people} person.\n\n"
                                 f"Waiting for your confirmation, thank you!"
                             )
                         
