@@ -567,18 +567,18 @@ def view_booking_page():
                 # WhatsApp mesajını en sade ve doğal konuşma dilinde oluşturuyoruz
                 if selected_lang == "🇹🇷 Türkçe":
                     final_msg = (
-                        f"Merhaba 👋\n\n"
+                        f"Merhaba \n\n"
                         f"Ben {name}. {formatted_date} tarihinde saat {time_val} için rezervasyon yaptırmak istiyorum.\n"
                         f"{people} kişilik '{package}' paketini seçtik.\n\n"
-                        f"Onayınızı bekliyorum, teşekkürler! ✨"
+                        f"Onayınızı bekliyorum, teşekkürler!"
                     )
                 else:
                     # Yabancı turistler için ortak İngilizce dil gönderimi
                     final_msg = (
-                        f"Hello 👋\n\n"
+                        f"Hello \n\n"
                         f"My name is {name}. I would like to make a reservation for {formatted_date} at {time_val}.\n"
-                        f"We would like the '{package}' package for {people} person(s).\n\n"
-                        f"Waiting for your confirmation, thank you! ✨"
+                        f"We would like the '{package}' package for {people} person.\n\n"
+                        f"Waiting for your confirmation, thank you!"
                     )
                 
                 encoded_msg = urllib.parse.quote(final_msg)
