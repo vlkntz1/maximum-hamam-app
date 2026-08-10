@@ -479,12 +479,21 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# POP-UP UYARI FONKSİYONU
+# POP-UP UYARI FONKSİYONLARI
 # ==========================================
-@st.dialog("⚠️")
+@st.dialog("⚠️ Uyarı / Error")
 def popup_error(message, btn_text):
     st.error(message)
     if st.button(btn_text, use_container_width=True):
+        st.rerun()
+
+@st.dialog("✅ Rezervasyon Başarılı / Booking Successful")
+def popup_success(message, link_md, btn_text):
+    st.success(message)
+    st.markdown(link_md, unsafe_allow_html=True)
+    st.write("---")
+    if st.button(btn_text, type="primary", use_container_width=True):
+        st.session_state.form_key += 1
         st.rerun()
 
 # ==========================================
@@ -507,11 +516,6 @@ def view_booking_page():
     
     if "form_key" not in st.session_state:
         st.session_state.form_key = 0
-        
-    if "success_data" in st.session_state:
-        st.success(st.session_state.success_data["msg"])
-        st.markdown(st.session_state.success_data["link"])
-        del st.session_state.success_data
         
     fk = st.session_state.form_key
     
@@ -542,54 +546,65 @@ def view_booking_page():
     submit = st.button(t["btn_save"], type="primary")
     
     if submit:
-        cleaned_phone_for_test = phone.replace(" ", "").replace("-", "").strip()
         formatted_date = date.strftime("%d.%m.%Y")
+        current_sub_id = f"{name}_{phone}_{formatted_date}_{time_val}"
         
-        if not name:
-            popup_error(t["err_name"], t["btn_ok"])
-        elif not phone:
-            popup_error(t["err_phone"], t["btn_ok"])
-        elif not re.match(r"^\+?[0-9]{7,15}$", cleaned_phone_for_test):
-            popup_error(t["err_phone_format"], t["btn_ok"])
-        elif pickup_needed and not hotel:
-            popup_error(t["err_hotel"], t["btn_ok"])
-        elif not time_val:
-            popup_error(t["err_invalid_time"], t["btn_ok"])
+        # Çift tıklamayı (double click) engellemek için kontrol
+        if st.session_state.get("last_sub_id") == current_sub_id:
+            popup_error("⚠️ Bu rezervasyon işlemi az önce sisteme kaydedildi. Lütfen devam etmek için sayfayı yenileyin veya WhatsApp'tan bizimle iletişime geçin.", t["btn_ok"])
         else:
-            if check_capacity(formatted_date, time_val):
-                popup_error(t["err_cap"], t["btn_ok"])
-            else:
-                final_phone = cleaned_phone_for_test
-                booking_id = add_booking(name, final_phone, package, people, formatted_date, time_val, hotel, notes)
+            # Bekleme (Yükleniyor) Animasyonu
+            with st.spinner("⏳ Lütfen bekleyin, rezervasyonunuz sisteme kaydediliyor... / Processing, please wait..."):
+                cleaned_phone_for_test = phone.replace(" ", "").replace("-", "").strip()
                 
-                business_phone = "905398303778"
-                
-                # WhatsApp mesajını en sade ve doğal konuşma dilinde oluşturuyoruz
-                if selected_lang == "🇹🇷 Türkçe":
-                    final_msg = (
-                        f"Merhaba \n\n"
-                        f"Ben {name}. {formatted_date} tarihinde saat {time_val} için rezervasyon yaptırmak istiyorum.\n"
-                        f"{people} kişilik '{package}' paketini seçtik.\n\n"
-                        f"Onayınızı bekliyorum, teşekkürler!"
-                    )
+                if not name:
+                    popup_error(t["err_name"], t["btn_ok"])
+                elif not phone:
+                    popup_error(t["err_phone"], t["btn_ok"])
+                elif not re.match(r"^\+?[0-9]{7,15}$", cleaned_phone_for_test):
+                    popup_error(t["err_phone_format"], t["btn_ok"])
+                elif pickup_needed and not hotel:
+                    popup_error(t["err_hotel"], t["btn_ok"])
+                elif not time_val:
+                    popup_error(t["err_invalid_time"], t["btn_ok"])
                 else:
-                    # Yabancı turistler için ortak İngilizce dil gönderimi
-                    final_msg = (
-                        f"Hello \n\n"
-                        f"My name is {name}. I would like to make a reservation for {formatted_date} at {time_val}.\n"
-                        f"We would like the '{package}' package for {people} person.\n\n"
-                        f"Waiting for your confirmation, thank you!"
-                    )
-                
-                encoded_msg = urllib.parse.quote(final_msg)
-                whatsapp_url = f"https://wa.me/{business_phone}?text={encoded_msg}"
-                
-                st.session_state.success_data = {
-                    "msg": f"{t['success']}, {name}! (ID: #{booking_id})",
-                    "link": f"### 👉 [{t['wa_link']}]({whatsapp_url})"
-                }
-                st.session_state.form_key += 1
-                st.rerun()
+                    if check_capacity(formatted_date, time_val):
+                        popup_error(t["err_cap"], t["btn_ok"])
+                    else:
+                        final_phone = cleaned_phone_for_test
+                        booking_id = add_booking(name, final_phone, package, people, formatted_date, time_val, hotel, notes)
+                        
+                        # Aynı formun ikinci kez tekrar gönderilmesini önlemek için hafızaya kaydetme
+                        st.session_state.last_sub_id = current_sub_id
+                        
+                        business_phone = "905398303778"
+                        
+                        # WhatsApp mesajını en sade ve doğal konuşma dilinde oluşturuyoruz (Emojiler kaldırıldı)
+                        if selected_lang == "🇹🇷 Türkçe":
+                            final_msg = (
+                                f"Merhaba\n\n"
+                                f"Ben {name}. {formatted_date} tarihinde saat {time_val} için rezervasyon yaptırmak istiyorum.\n"
+                                f"{people} kişilik '{package}' paketini seçtik.\n\n"
+                                f"Onayınızı bekliyorum, teşekkürler!"
+                            )
+                        else:
+                            # Yabancı turistler için ortak İngilizce dil gönderimi
+                            final_msg = (
+                                f"Hello\n\n"
+                                f"My name is {name}. I would like to make a reservation for {formatted_date} at {time_val}.\n"
+                                f"We would like the '{package}' package for {people} person(s).\n\n"
+                                f"Waiting for your confirmation, thank you!"
+                            )
+                        
+                        encoded_msg = urllib.parse.quote(final_msg)
+                        whatsapp_url = f"https://wa.me/{business_phone}?text={encoded_msg}"
+                        
+                        # Ekranın ortasında dikkat çeken başarılı pop-up'ı (Modal) aç
+                        popup_success(
+                            message=f"{t['success']}, {name}! (ID: #{booking_id})",
+                            link_md=f"### 👉 [{t['wa_link']}]({whatsapp_url})",
+                            btn_text=t['btn_ok']
+                        )
 
 # B. Yönetici (Admin) Sayfası
 def view_admin_page():
